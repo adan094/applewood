@@ -21,6 +21,14 @@ class Staff
 {
 	int m_name{};
 	std::vector<ScheduleSlot*> timesAvailable{};
+public:
+
+	Staff(const std::vector<ScheduleSlot*> timesAvailable, const std::vector <Activity*> preferred, const std::vector <Activity*> neutral, const std::vector <Activity*> unpreferred)
+		:m_timesAvailable{timesAvailable},
+		m_preferred{preferred},
+		m_neutral{neutral},
+		m_unpreferred{unpreferred}
+	{}
 };
 
 class Activity
