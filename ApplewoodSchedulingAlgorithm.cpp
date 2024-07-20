@@ -17,20 +17,7 @@ std::random_device rd{};
 std::seed_seq ss{ rd(), rd(), rd(), rd(), rd(), rd(), rd(), rd() };
 std::mt19937 mt{ ss };
 
-class Staff
-{
-	int m_name{};
-	std::vector<ScheduleSlot*> timesAvailable{};
-public:
-
-	Staff(const std::vector<ScheduleSlot*> timesAvailable, const std::vector <Activity*> preferred, const std::vector <Activity*> neutral, const std::vector <Activity*> unpreferred)
-		:m_timesAvailable{timesAvailable},
-		m_preferred{preferred},
-		m_neutral{neutral},
-		m_unpreferred{unpreferred}
-	{}
-};
-
+class Staff;
 class Activity
 {
 	//Activities have names, times available, total times available and ideal times per cycle.
@@ -227,6 +214,19 @@ public:
 
 
 
+class Staff
+{
+	int m_name{};
+	std::vector<ScheduleSlot*> timesAvailable{};
+public:
+
+	Staff(const std::vector<ScheduleSlot*> timesAvailable, const std::vector <Activity*> preferred, const std::vector <Activity*> neutral, const std::vector <Activity*> unpreferred)
+		:m_timesAvailable{timesAvailable},
+		m_preferred{preferred},
+		m_neutral{neutral},
+		m_unpreferred{unpreferred}
+	{}
+};
 
 
 
