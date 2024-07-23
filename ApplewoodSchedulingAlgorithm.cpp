@@ -8,41 +8,41 @@
 #include <optional>
 #include <random>
 
-constexpr int daysInCycle{ 5 };
-constexpr int periodsInGroup{ 5 };
-constexpr int periodsInDay{ 10 };
+constexpr int daysInCycle{ 5 }; //number of days in generated schedule
+constexpr int periodsInDay{ 10 }; //number of periods (schedule slots) in each day
 
 
 std::random_device rd{};
-std::seed_seq ss{ rd(), rd(), rd(), rd(), rd(), rd(), rd(), rd() };
-std::mt19937 mt{ ss };
+std::seed_seq ss{ rd(), rd(), rd(), rd(), rd(), rd(), rd(), rd() }; //generates a seed sequence using the OS's random device
+std::mt19937 mt{ ss }; //seeds merene twister using the generated seed sequence
 
-class Staff;
+class Staff; //staff class prototype so it can be referred to in Activity
 
 class Activity
 {
-	//Activities have names, times available, total times available and ideal times per cycle.
-	std::string m_activityName{};
-	std::vector <std::size_t> m_timesAvailable{};
-	std::vector <std::size_t> m_scheduleTimesAvailable{};
-	int m_timesPerCycle{};
-	int m_offset{};
-	int m_activityID{};
-	std::vector <Staff*> m_preferred{};
-	std::vector <Staff*> m_neutral{};
-	std::vector <Staff*> m_unpreferred{};
+
+	std::string m_activityName{}; //the display name of the activity
+	std::vector <std::size_t> m_timesAvailable{}; //holds the indices of the schedule slots where this activity can occur
+	std::vector <std::size_t> m_scheduleTimesAvailable{}; 
+	int m_timesPerCycle{}; //number of times this activity should occur in the generated schedule
+	int m_offset{}; //the offset of the randomly generated ranges for selecting random schedule slots
+	int m_activityID{}; //the unique id of the activity
+	std::vector <Staff*> m_preferred{}; //a list of the staff who prefer to lead this activity
+	std::vector <Staff*> m_neutral{}; //a list of the staff who are neutral towards leading this activity
+	std::vector <Staff*> m_unpreferred{}; //a list of the staff who prefer not to lead this activity
 
 public:
 
-	Activity() = default;
+	Activity() = default; //a default constructor with no arguments
 
-	//creates Activity
-	Activity(std::string_view activityName, std::vector <std::size_t>& timesAvailable, int timesPerCycle, const int activityID)
+	//creates Activity using its display name, list of when it can occur, how many times it should happen and unique id.
+	Activity(const std::string_view activityName, std::vector <std::size_t>& timesAvailable, const int timesPerCycle, const int activityID)
 		: m_activityName{ activityName },
-		m_timesAvailable{ std::move(timesAvailable) },
+		m_timesAvailable{ std::move(timesAvailable) }, //times available is moved to save computing costs of copying the list
 		m_timesPerCycle{ timesPerCycle },
 		m_activityID{ activityID }
 	{}
+
 
 	void setOffset(std::vector <int>& timeSlots)
 	{
@@ -155,6 +155,7 @@ public:
 	{
 		return m_activities;
 	}
+
 	constexpr int getCategoryIndex() const
 	{
 		return m_categoryIndex;
@@ -213,18 +214,23 @@ public:
 
 };
 
+//stores staff members
 class Staff
 {
-	int m_name{};
-	std::vector<ScheduleSlot*> m_timesAvailable{};
-	std::vector <Activity*> m_preferred{};
-	std::vector <Activity*> m_neutral{};
-	std::vector <Activity*> m_unpreferred{};
+	std::string m_name{}; //staff name
+	std::vector<ScheduleSlot*> m_timesAvailableToLead{}; //holds pointers to schedule slots where this staff is available to lead (has not been booked and does not havve break or personal time)
+	
+	//stores staffs leading preferences
+	std::vector <Activity*> m_preferred{}; //holds pointers to activities that this staff would prefer to lead
+	std::vector <Activity*> m_neutral{};  //holds pointers to activities that this staff feels neutral about leading
+	std::vector <Activity*> m_unpreferred{}; //holds pointers to activities that this staff would not prefer to, but can lead
 
 public:
 
-	Staff(const std::vector<ScheduleSlot*> timesAvailable, const std::vector <Activity*> preferred, const std::vector <Activity*> neutral, const std::vector <Activity*> unpreferred)
-		:m_timesAvailable{ timesAvailable },
+	//Staff constructor, memberwise initialization of all member variables
+	Staff(const std::string_view name, const std::vector<ScheduleSlot*> timesAvailable, const std::vector <Activity*> preferred, const std::vector <Activity*> neutral, const std::vector <Activity*> unpreferred)
+		: m_name{name},
+		m_timesAvailableToLead{ timesAvailable },
 		m_preferred{ preferred },
 		m_neutral{ neutral },
 		m_unpreferred{ unpreferred }
@@ -492,7 +498,7 @@ void getValues(std::string& line, std::vector<std::size_t>& fillVector)
 	}
 }
 
-void getStrings(std::string& line, std::vector<std::string>& fillVector)
+void getStrings(std::string_view line, std::vector<std::string>& fillVector)
 {
 	std::size_t(*endpoint)(std::string_view)(&findNextSemi);
 	bool loopAgain{ true };
@@ -538,22 +544,23 @@ void createActivityCategory(std::vector <ActivityCategory>& categories, std::str
 	categories.push_back(ActivityCategory(category, activities, timesPerCycle));
 }
 
+//takes in a lsit of activity anmes to search for and the list of activity categories and fills a list of pointers to those activities
 void getActivities(const std::vector<std::string>& activityNames, std::vector<Activity*> &activities, std::vector <ActivityCategory>& categories)
 {
-	for (std::size_t i{ 0 }; i < activityNames.size(); ++i)
+	for (std::size_t i{ 0 }; i < activityNames.size(); ++i) //loops through all activities we are searching for
 	{
-		bool loopAgain{ true };
-		for (std::size_t j{ 0 }; j < categories.size() && loopAgain; ++j)
+		bool loopAgain{ true }; //control variable that allows the process to skip to searching for next activity once the activity has been found
+		for (std::size_t j{ 0 }; j < categories.size() && loopAgain; ++j) //loops through activity categories while there are more to search and the activity has not yet been found
 		{
-			std::vector<Activity>* categoryActivities{ &(categories[j].getActivities()) };
-			for (std::size_t k{ 0 }; k < categoryActivities->size() && loopAgain; ++k)
+			//allows us to only copy the list of activitivies int the activity category one time
+			std::vector<Activity>*  categoryActivities{ &(categories[j].getActivities()) };  //holds a pointer to the list of activities in the activity category
+			for (std::size_t k{ 0 }; k < categoryActivities->size() && loopAgain; ++k) //loops through activities while there are more to search and the activity has not yet been found
 			{
 				
-				if ((*categoryActivities)[k].getName() == activityNames[i])
+				if ((*categoryActivities)[k].getName() == activityNames[i]) //if the activity is the activity we are searching for (it has the same name as the next activity in the list of activities we are searching for)
 				{
-					std::cout << (*categoryActivities)[k].getName();
-					activities.push_back(&(*categoryActivities)[k]);
-					loopAgain = false;
+					activities.push_back(&(*categoryActivities)[k]); //add a pointer to the activity to the activities vector
+					loopAgain = false; //marks activity as found, allowing process to skip to next activity
 				}
 			}
 		}
@@ -570,43 +577,42 @@ void getScheduleSlots(const std::vector<std::size_t> avail, std::vector<Schedule
 	}
 }
 
+//takes in a string and a breakpoint and fiils the inputted activity pointers vector with activity pointers to the activites found within the string
+void processActivitiesListFromFileToVectorofActivityPointers(const std::string_view line, std::vector<Activity*> &activityPointers, std::vector <ActivityCategory>& categories, const std::size_t breakLocation)
+{
+	std::string raw{ line.substr(0,breakLocation) };  //hold raw list of activities
+	std::vector<std::string> names{}; //holds list of activities names
+	getStrings(raw, names); //processes raw list and fills list of activities names
+	getActivities(names, activityPointers, categories); //gets list of pointers to activities using their names and fills activity pointers vector
+}
+
 void readInStaff(std::ifstream& myReader, std::vector <ActivityCategory>& categories)
 {
-	std::cout << 0;
 	std::string line{};//holds line data
-	while (std::getline(myReader, line))
+	while (std::getline(myReader, line)) //iterates for each staff in the file
 	{
-		std::cout << 0;
-		std::size_t comma{ line.find(',') };//location of break between staff name and preferred lead activities
-		std::string name{ line.substr(0,comma) };
+		std::size_t breakLocation{ line.find(',') };//location of break between staff name and preferred lead activities
+		std::string name{ line.substr(0,breakLocation) }; //holds staff name
 
-		line = line.substr(comma + 1, line.size());
-		std::vector<std::string> pref{};
-		comma = line.find(',');
-		std::string l{ line.substr(0,comma) };
-		getStrings(l, pref);
-		std::vector<Activity*> preferred{};
-		getActivities(pref, preferred, categories);
 
-		line = line.substr(comma + 1, line.size());
-		std::vector<std::string> neut{};
-		comma = line.find(',');
-		l=line.substr(0,comma) ;
-		getStrings(l, neut);
-		std::vector<Activity*> neutral{};
-		getActivities(neut, neutral, categories);
 
-		comma = line.find(',');
-		line = line.substr(comma + 1, line.size());
-		std::vector<std::string> unpref{};
-		comma = line.find(',');
-		l= line.substr(0,comma) ;
-		getStrings(l, unpref);
-		std::vector<Activity*> unpreferred{};
-		getActivities(unpref, unpreferred, categories);
+		line = line.substr(breakLocation + 1, line.size()); //line removes staff name and break
+		std::vector<Activity*> preferred{}; //holds list of pointers to preffered activites
+		breakLocation = line.find(','); //location of next breakpoint (at the end of the list of preffered activites)
+		processActivitiesListFromFileToVectorofActivityPointers(line, preferred, categories, breakLocation); //fills preferred vector with pointer to activities between teh previous and current breakpoints
 
-		comma = line.find(',');
-		line = line.substr(comma + 1, line.size());
+		line = line.substr(breakLocation + 1, line.size()); //line removes list of preferred names and break
+		std::vector<Activity*> neutral{}; //holds list of pointers to preffered activites
+		breakLocation = line.find(','); //location of next breakpoint (at the end of the list of neutral activites)
+		processActivitiesListFromFileToVectorofActivityPointers(line, neutral, categories, breakLocation); //fills neutral vector with pointer to activities between teh previous and current breakpoints
+
+		line = line.substr(breakLocation + 1, line.size()); //line removes staff name and first break
+		std::vector<Activity*> unpreferred{}; //holds list of pointers to preffered activites
+		breakLocation = line.find(','); //location of next breakpoint (at the end of the list of unpreferred activites)
+		processActivitiesListFromFileToVectorofActivityPointers(line, unpreferred, categories, breakLocation); //fills unpreferred vector with pointer to activities between teh previous and current breakpoints
+
+		breakLocation = line.find(',');
+		line = line.substr(breakLocation + 1, line.size());
 		std::vector<std::size_t> breaks{};
 		getValues(line, breaks);
 		std::size_t j{ 0 };
@@ -627,50 +633,50 @@ void readInStaff(std::ifstream& myReader, std::vector <ActivityCategory>& catego
 //reads in activity and activity category info and stores it in categories vector
 int readInActivityCategories(std::vector <ActivityCategory>& categories)
 {
-	std::ifstream myReader{ "scheduling.csv" };
-	int activityID{ 0 };
+	std::ifstream myReader{ "scheduling.csv" }; //selects file "scheduling.csv" to read in
+	int activityID{ 0 }; //sets next activity id to 0
 	try
 	{
-		if (!myReader)
+		if (!myReader) //if reader fails to open file throw exception
 			throw "File could not be opened\n";
 
 		std::string line{};//holds line data
 		std::getline(myReader, line); //skips first line (column headers)
-		std::string prevCategory{ "" };
+		std::string prevCategory{ "" }; //holds previous activity category name
 
 
 
 		std::vector <Activity> activities{};//vector storing activities belonging to activity group
-		int timesPerCycle{ 0 };
-		while (true)
+		int timesPerCycle{ 0 }; //holds total number of times activity category will occur
+		while (true) //loops until broken (when staff starts to be read in), reasds one activity at a time ine
 		{
 			std::getline(myReader, line); //gets line
 			std::size_t comma{ line.find(',') };//location of break between category name and activity name
-			std::string category{ line.substr(0,comma) };
+			std::string category{ line.substr(0,comma) }; //category name
 
-			if (category == "Staff") //oncw staff is hit breaks and starts to read in staff
+			if (category == "Staff") //once staff is hit breaks and starts to read in staff
 				break;
 
 			if (category != prevCategory && prevCategory != "") //if category is new (not first category)
 			{
 				createActivityCategory(categories, prevCategory, activities, timesPerCycle); //create previous activity category
-				timesPerCycle = 0;
+				timesPerCycle = 0; //resets number of times avctivity cateogry will occur
 				activities.clear(); //reset activities
 			}
-			prevCategory = category; //ensures category is updated (imporatnt for first iteration)
+			prevCategory = category; //ensures category is updated (important for first iteration)
 			timesPerCycle += addActivity(line.substr(comma + 1, line.size() - comma - 1), activities, activityID); //adds activity using line excluidng activity category information
-			++activityID;
+			++activityID; //iterates activity id
 		}
 		createActivityCategory(categories, prevCategory, activities, timesPerCycle); //creates final activity category
 		readInStaff(myReader, categories); //reads in staff
 	}
-	catch (const char* errorMessage)
+	catch (const char* errorMessage) //if file could not be opened
 	{
-		std::cerr << errorMessage;
-		throw;
+		std::cerr << errorMessage; //print file error message
+		throw; //rethrow exception
 	}
 
-	return activityID;
+	return activityID; //retuirns the file activityid (total number of activities)
 }
 
 //std::array<ScheduleSlot, daysInCycle* periodsInDay> ParticipantGroup::scheduleSlots{};
