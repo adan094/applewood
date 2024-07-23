@@ -18,6 +18,7 @@ std::seed_seq ss{ rd(), rd(), rd(), rd(), rd(), rd(), rd(), rd() };
 std::mt19937 mt{ ss };
 
 class Staff;
+
 class Activity
 {
 	//Activities have names, times available, total times available and ideal times per cycle.
@@ -138,7 +139,7 @@ public:
 	}
 	Activity* getNextActivity()
 	{
-		std::cerr << 'r'<<m_activityCounter;
+		std::cerr << 'r' << m_activityCounter;
 		return  &(getActivities()[m_activityCounter]);
 	}
 
@@ -212,19 +213,21 @@ public:
 
 };
 
-
-
 class Staff
 {
 	int m_name{};
-	std::vector<ScheduleSlot*> timesAvailable{};
+	std::vector<ScheduleSlot*> m_timesAvailable{};
+	std::vector <Activity*> m_preferred{};
+	std::vector <Activity*> m_neutral{};
+	std::vector <Activity*> m_unpreferred{};
+
 public:
 
 	Staff(const std::vector<ScheduleSlot*> timesAvailable, const std::vector <Activity*> preferred, const std::vector <Activity*> neutral, const std::vector <Activity*> unpreferred)
-		:m_timesAvailable{timesAvailable},
-		m_preferred{preferred},
-		m_neutral{neutral},
-		m_unpreferred{unpreferred}
+		:m_timesAvailable{ timesAvailable },
+		m_preferred{ preferred },
+		m_neutral{ neutral },
+		m_unpreferred{ unpreferred }
 	{}
 };
 
@@ -247,11 +250,12 @@ public:
 
 
 
-/*class ParticipantGroup
+class ParticipantGroup
 {
 	int m_participants{};
 	std::vector <int> m_timeSlots{};
 	int m_totalTimeSlots{};
+
 
 public:
 
@@ -269,17 +273,18 @@ public:
 		return m_totalTimeSlots;
 	}
 
-	//returns whether a given range is filled
-	bool rangeIsFilled(const int begin, const int end, const int range, std::vector<int> &slotsAvailable)
+	//returns whether a given range is filled s
+	bool rangeIsFilled(const int begin, const int end, const int range, std::vector<int>& slotsAvailable)
 	{
 		auto iterator{ scheduleSlots.begin() + begin };
 		while (iterator < scheduleSlots.begin() + end)
 		{
+
 			if (iterator->getActivity() == nullptr)
-				slotsAvailable.push_back(iterator - scheduleSlots.begin());
+				slotsAvailable.push_back((iterator)-scheduleSlots.begin());
 			++iterator;
 		}
-		if(slotsAvailable.size()==0)
+		if (slotsAvailable.size() == 0)
 		{
 			std::cerr << "i";  //for bug testing
 
@@ -300,17 +305,8 @@ public:
 		do
 		{
 
-			/*if (range == -1) //if range is first range
-			{
-				std::uniform_int_distribution randInFirstRange{ 0,activity->getOffset() - 1 }; //random spot within first range
-				slotIndex = randInFirstRange(mt); //chooses new schedule slot
-
-			}
-			else //if range is not first range
-			{
-				std::uniform_int_distribution randslotAvailable{ 0,static_cast<int>(slotsAvailable.size()-1)};
-				slotIndex = activity->getTimesAvailable()[slotsAvailable[randslotAvailable(mt)]]; //chooses new schedule slot
-			}
+			std::uniform_int_distribution randslotAvailable{ 0,static_cast<int>(slotsAvailable.size() - 1) };
+			slotIndex = activity->getTimesAvailable()[slotsAvailable[randslotAvailable(mt)]]; //chooses new schedule slot
 
 		} while (scheduleSlots[slotIndex].getActivityCategory() != nullptr);// find new value while schedule slot is already filled
 		return slotIndex;
@@ -345,7 +341,7 @@ public:
 			{
 
 				std::uniform_int_distribution randSlot{ 0,static_cast<int>(unfilledSlots.size() - 1) };
-				return unfilledSlots[randSlot(mt)]; //returns a random empty slot
+				return static_cast<int>(unfilledSlots[randSlot(mt)]); //returns a random empty slot
 			}
 
 		}
@@ -357,10 +353,10 @@ public:
 		//loops until all of activity categories spots have been filled
 		for (int activities{ 0 }; activities < static_cast<int>(activityCategory.getActivities().size()); ++activities) //fill a total of idealSlots slots
 		{
-			std::cerr <<'?'<< activities << ' ' << static_cast<int>(activityCategory.getActivities().size()) << "?\n";
+			std::cerr << '?' << activities << ' ' << static_cast<int>(activityCategory.getActivities().size()) << "?\n";
 			activityCategory.incActivityCounter();
 			Activity* activity{ activityCategory.getNextActivity() };
-			
+
 			activity->setOffset(m_timeSlots);
 
 			std::uniform_int_distribution randRange{ 0,idealSlots }; //random range
@@ -385,7 +381,7 @@ public:
 	void fillAllSlots(std::vector <ActivityCategory>& categories, std::vector < std::size_t >& unfilledSlots, std::vector <std::vector<int>>& finishedRanges)
 	{
 		std::size_t catIndex{ 0 };
-		while (unfilledSlots.size() > 0&&catIndex< categories.size()) //loops until all slots are filled
+		while (unfilledSlots.size() > 0 && catIndex < categories.size()) //loops until all slots are filled
 		{
 			//slots left to fill for activity category in this participant group is total slots for activity category multiplied by % of total time slots in this participant group
 			double percentOfTotal{ (static_cast<double>(m_totalTimeSlots) / (periodsInDay * daysInCycle)) };
@@ -444,7 +440,7 @@ public:
 	//fills this participant group's schedule with activities
 	void addActivities(std::vector <ActivityCategory>& categories, const int maxID)
 	{
-		std::vector <std::vector<int>> finishedRanges(maxID+1); //stores which ranges are already filled with each activity category
+		std::vector <std::vector<int>> finishedRanges(maxID + 1); //stores which ranges are already filled with each activity category
 		std::vector < std::size_t > unfilledSlots{}; //stores slots which are unfilled
 
 		findAlreadyFilledSlots(categories, unfilledSlots, finishedRanges); //finds slots already filled prior to this participant group
@@ -456,7 +452,7 @@ public:
 		return;
 	}
 
-};*/
+};
 
 
 
@@ -472,22 +468,12 @@ std::size_t findEnd(std::string_view string)
 	return string.find(',');
 }
 
-//adds activity to activities array, returns times per cycle for activity
-int addActivity(std::string line, std::vector <Activity>& activities, const int activityID)
+
+void getValues(std::string& line, std::vector<std::size_t>& fillVector)
 {
-	std::size_t comma{ line.find(',') }; //find break between activity name and activity times available
-	std::string activityName{ line.substr(0,comma) };
-	line = line.substr(comma + 1, line.size() - comma - 1); //removes activty name from line
-
-
-	std::vector < std::size_t > timesAvailable{};//array storing if activity is available at each time slot
-	bool loopAgain{ true };
-
-
 	std::size_t(*endpoint)(std::string_view)(&findNextSemi);
-
-	//loops while more time available ranges exist (while dividers exist plus once more)
-	while (loopAgain)
+	bool loopAgain{ true };
+	while (loopAgain)	//loops while more time available ranges exist (while dividers exist plus once more)
 	{
 		if (line.find(':') == std::string::npos)//if range divider does not exist, stop looping after this iteration and search for boundary to times per cycle instead of between ranges
 		{
@@ -498,12 +484,43 @@ int addActivity(std::string line, std::vector <Activity>& activities, const int 
 
 		std::size_t startRange{ static_cast<std::size_t>(std::stoi(line.substr(0, line.find('-')))) - 1 };//gets start of range
 		std::size_t endRange{ static_cast<std::size_t>(std::stoi(line.substr(line.find('-') + 1,endpoint(line)))) - 1 }; //gets end of range
-		for (std::size_t index{ startRange }; index <= endRange; ++index) //while withing range update time availble to true and iterate total times available
+		for (std::size_t index{ startRange }; index <= endRange; ++index) //while within range update time availble to true and iterate total times available
 		{
-			timesAvailable.push_back(index);
+			fillVector.push_back(index);
 		}
 		line = line.substr(endpoint(line) + 1, line.size() - endpoint(line)); //remove range added from range list
 	}
+}
+
+void getStrings(std::string& line, std::vector<std::string>& fillVector)
+{
+	std::size_t(*endpoint)(std::string_view)(&findNextSemi);
+	bool loopAgain{ true };
+	while (loopAgain)	//loops while more time available ranges exist (while dividers exist plus once more)
+	{
+		if (line.find(':') == std::string::npos)//if range divider does not exist, stop looping after this iteration and search for boundary to times per cycle instead of between ranges
+		{
+			loopAgain = false;
+			endpoint = &findEnd;
+		}
+
+		fillVector.emplace_back(line.substr(0, endpoint(line)));
+		line = line.substr(endpoint(line) + 1, line.size() - endpoint(line)); //remove range added from range list
+	}
+}
+
+//adds activity to activities array, returns times per cycle for activity
+int addActivity(std::string line, std::vector <Activity>& activities, const int activityID)
+{
+	std::size_t comma{ line.find(',') }; //find break between activity name and activity times available
+	std::string activityName{ line.substr(0,comma) };
+	line = line.substr(comma + 1, line.size() - comma - 1); //removes activty name from line
+
+
+	std::vector < std::size_t > timesAvailable{};//array storing if activity is available at each time slot
+
+
+	getValues(line, timesAvailable);
 
 	int timesPerCycle{ std::stoi(line) };
 
@@ -519,6 +536,92 @@ void createActivityCategory(std::vector <ActivityCategory>& categories, std::str
 			return first.getTotalTimesAvailable() < second.getTotalTimesAvailable();
 		});
 	categories.push_back(ActivityCategory(category, activities, timesPerCycle));
+}
+
+void getActivities(const std::vector<std::string>& activityNames, std::vector<Activity*> &activities, std::vector <ActivityCategory>& categories)
+{
+	for (std::size_t i{ 0 }; i < activityNames.size(); ++i)
+	{
+		bool loopAgain{ true };
+		for (std::size_t j{ 0 }; j < categories.size() && loopAgain; ++j)
+		{
+			std::vector<Activity>* categoryActivities{ &(categories[j].getActivities()) };
+			for (std::size_t k{ 0 }; k < categoryActivities->size() && loopAgain; ++k)
+			{
+				
+				if ((*categoryActivities)[k].getName() == activityNames[i])
+				{
+					std::cout << (*categoryActivities)[k].getName();
+					activities.push_back(&(*categoryActivities)[k]);
+					loopAgain = false;
+				}
+			}
+		}
+	}
+}
+
+std::array<ScheduleSlot, daysInCycle* periodsInDay> ParticipantGroup::scheduleSlots{};
+
+void getScheduleSlots(const std::vector<std::size_t> avail, std::vector<ScheduleSlot*> timesAvailable)
+{
+	for (std::size_t i{ 0 }; i < avail.size(); ++i)
+	{
+		timesAvailable.push_back(&ParticipantGroup::scheduleSlots[i]);
+	}
+}
+
+void readInStaff(std::ifstream& myReader, std::vector <ActivityCategory>& categories)
+{
+	std::cout << 0;
+	std::string line{};//holds line data
+	while (std::getline(myReader, line))
+	{
+		std::cout << 0;
+		std::size_t comma{ line.find(',') };//location of break between staff name and preferred lead activities
+		std::string name{ line.substr(0,comma) };
+
+		line = line.substr(comma + 1, line.size());
+		std::vector<std::string> pref{};
+		comma = line.find(',');
+		std::string l{ line.substr(0,comma) };
+		getStrings(l, pref);
+		std::vector<Activity*> preferred{};
+		getActivities(pref, preferred, categories);
+
+		line = line.substr(comma + 1, line.size());
+		std::vector<std::string> neut{};
+		comma = line.find(',');
+		l=line.substr(0,comma) ;
+		getStrings(l, neut);
+		std::vector<Activity*> neutral{};
+		getActivities(neut, neutral, categories);
+
+		comma = line.find(',');
+		line = line.substr(comma + 1, line.size());
+		std::vector<std::string> unpref{};
+		comma = line.find(',');
+		l= line.substr(0,comma) ;
+		getStrings(l, unpref);
+		std::vector<Activity*> unpreferred{};
+		getActivities(unpref, unpreferred, categories);
+
+		comma = line.find(',');
+		line = line.substr(comma + 1, line.size());
+		std::vector<std::size_t> breaks{};
+		getValues(line, breaks);
+		std::size_t j{ 0 };
+		std::vector<std::size_t> avail{};
+		for (std::size_t i{ 0 }; i < periodsInDay * daysInCycle; ++i)
+		{
+			if (i != breaks[j])
+				avail.push_back(i);
+			else if (j < breaks.size() - 1)
+				++j;
+		}
+		std::vector<ScheduleSlot*> timesAvailable{};
+		getScheduleSlots(avail, timesAvailable);
+		std::cout << preferred[0]->getName();
+	}
 }
 
 //reads in activity and activity category info and stores it in categories vector
@@ -537,12 +640,16 @@ int readInActivityCategories(std::vector <ActivityCategory>& categories)
 
 
 
-		std::vector <Activity> activities{};//vectro storing activities belonging to activity group
+		std::vector <Activity> activities{};//vector storing activities belonging to activity group
 		int timesPerCycle{ 0 };
-		while (std::getline(myReader, line))
+		while (true)
 		{
+			std::getline(myReader, line); //gets line
 			std::size_t comma{ line.find(',') };//location of break between category name and activity name
 			std::string category{ line.substr(0,comma) };
+
+			if (category == "Staff") //oncw staff is hit breaks and starts to read in staff
+				break;
 
 			if (category != prevCategory && prevCategory != "") //if category is new (not first category)
 			{
@@ -555,6 +662,7 @@ int readInActivityCategories(std::vector <ActivityCategory>& categories)
 			++activityID;
 		}
 		createActivityCategory(categories, prevCategory, activities, timesPerCycle); //creates final activity category
+		readInStaff(myReader, categories); //reads in staff
 	}
 	catch (const char* errorMessage)
 	{
