@@ -586,7 +586,7 @@ void processActivitiesListFromFileToVectorofActivityPointers(const std::string_v
 	getActivities(names, activityPointers, categories); //gets list of pointers to activities using their names and fills activity pointers vector
 }
 
-void readInStaff(std::ifstream& myReader, std::vector <ActivityCategory>& categories)
+void readInStaff(std::ifstream& myReader, std::vector <ActivityCategory>& categories, std::vector <Staff> &staff)
 {
 	std::string line{};//holds line data
 	while (std::getline(myReader, line)) //iterates for each staff in the file
@@ -626,12 +626,13 @@ void readInStaff(std::ifstream& myReader, std::vector <ActivityCategory>& catego
 		std::vector<ScheduleSlot*> timesAvailable{}; //holds pointers to the schedule slots corresponding to the times the staff can lead at
 		getScheduleSlots(availableTimes, timesAvailable); //fills the list of pointers using the indecies of the times that the staff can lead at 
 
+		staff.emplace_back(name, timesAvailable, preferred, neutral, unpreferred);
 
 	}
 }
 
 //reads in activity and activity category info and stores it in categories vector
-int readInActivityCategories(std::vector <ActivityCategory>& categories)
+int readInActivityCategories(std::vector <ActivityCategory>& categories, std::vector <Staff>& staff)
 {
 	std::ifstream myReader{ "scheduling.csv" }; //selects file "scheduling.csv" to read in
 	int activityID{ 0 }; //sets next activity id to 0
@@ -668,7 +669,7 @@ int readInActivityCategories(std::vector <ActivityCategory>& categories)
 			++activityID; //iterates activity id
 		}
 		createActivityCategory(categories, prevCategory, activities, timesPerCycle); //creates final activity category
-		readInStaff(myReader, categories); //reads in staff
+		readInStaff(myReader, categories,staff); //reads in staff
 	}
 	catch (const char* errorMessage) //if file could not be opened
 	{
@@ -695,12 +696,13 @@ int main()
 	//ParticipantGroup testGroup{ 1,timeSlots,50 };
 
 	std::vector <ActivityCategory> categories{};
+	std::vector <Staff> staff{};
 
 	int maxID{};
 
 	try
 	{
-		maxID = readInActivityCategories(categories);
+		maxID = readInActivityCategories(categories, staff);
 	}
 	catch (...)
 	{
