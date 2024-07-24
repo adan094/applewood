@@ -477,14 +477,14 @@ std::size_t findEnd(std::string_view string)
 
 void getValues(std::string& line, std::vector<std::size_t>& fillVector)
 {
-	std::size_t(*endpoint)(std::string_view)(&findNextSemi);
-	bool loopAgain{ true };
+	std::size_t(*endpoint)(std::string_view)(&findNextSemi); //initializes endpoint function pointer and sets it to point to find next semi
+	bool loopAgain{ true }; //controls whether or not the loop will continue iterating
 	while (loopAgain)	//loops while more time available ranges exist (while dividers exist plus once more)
 	{
 		if (line.find(':') == std::string::npos)//if range divider does not exist, stop looping after this iteration and search for boundary to times per cycle instead of between ranges
 		{
-			loopAgain = false;
-			endpoint = &findEnd;
+			loopAgain = false; //stop iterating (this is the last range)
+			endpoint = &findEnd; //set endpoint to comma (since that is the divider between csv columns)
 		}
 
 
@@ -492,7 +492,7 @@ void getValues(std::string& line, std::vector<std::size_t>& fillVector)
 		std::size_t endRange{ static_cast<std::size_t>(std::stoi(line.substr(line.find('-') + 1,endpoint(line)))) - 1 }; //gets end of range
 		for (std::size_t index{ startRange }; index <= endRange; ++index) //while within range update time availble to true and iterate total times available
 		{
-			fillVector.push_back(index);
+			fillVector.push_back(index); //adds index to list of values in vector
 		}
 		line = line.substr(endpoint(line) + 1, line.size() - endpoint(line)); //remove range added from range list
 	}
@@ -606,27 +606,27 @@ void readInStaff(std::ifstream& myReader, std::vector <ActivityCategory>& catego
 		breakLocation = line.find(','); //location of next breakpoint (at the end of the list of neutral activites)
 		processActivitiesListFromFileToVectorofActivityPointers(line, neutral, categories, breakLocation); //fills neutral vector with pointer to activities between teh previous and current breakpoints
 
-		line = line.substr(breakLocation + 1, line.size()); //line removes staff name and first break
+		line = line.substr(breakLocation + 1, line.size()); //line removes neutral names and break
 		std::vector<Activity*> unpreferred{}; //holds list of pointers to preffered activites
 		breakLocation = line.find(','); //location of next breakpoint (at the end of the list of unpreferred activites)
 		processActivitiesListFromFileToVectorofActivityPointers(line, unpreferred, categories, breakLocation); //fills unpreferred vector with pointer to activities between teh previous and current breakpoints
 
-		breakLocation = line.find(',');
-		line = line.substr(breakLocation + 1, line.size());
-		std::vector<std::size_t> breaks{};
-		getValues(line, breaks);
-		std::size_t j{ 0 };
-		std::vector<std::size_t> avail{};
-		for (std::size_t i{ 0 }; i < periodsInDay * daysInCycle; ++i)
+		line = line.substr(breakLocation + 1, line.size()); //line removes unpreferred names and break
+		std::vector<std::size_t> staffBreaks{}; //stores vector of break times for this staff member
+		getValues(line, staffBreaks); //gets staff breaks from line and adds ranges to staffBreaks vector
+		std::size_t j{ 0 }; //holds the time of the next break as we search through all schedule slots
+		std::vector<std::size_t> availableTimes{}; //holds all the times when the staff can lead (not break times)
+		for (std::size_t i{ 0 }; i < periodsInDay * daysInCycle; ++i) //loops throough all possible schedule slots
 		{
-			if (i != breaks[j])
-				avail.push_back(i);
-			else if (j < breaks.size() - 1)
-				++j;
+			if (i != staffBreaks[j]) //if the schedule slot is not in the break list
+				availableTimes.push_back(i); //add the schedule slot time to the times available vector
+			else if (j < staffBreaks.size() - 1) //if the schedule slot is in the break list and it is not the last break
+				++j; //iterate to check the next break schedule slot
 		}
-		std::vector<ScheduleSlot*> timesAvailable{};
-		getScheduleSlots(avail, timesAvailable);
-		std::cout << preferred[0]->getName();
+		std::vector<ScheduleSlot*> timesAvailable{}; //holds pointers to the schedule slots corresponding to the times the staff can lead at
+		getScheduleSlots(availableTimes, timesAvailable); //fills the list of pointers using the indecies of the times that the staff can lead at 
+
+
 	}
 }
 
@@ -693,7 +693,6 @@ int main()
 		timeSlots.push_back(i);
 
 	//ParticipantGroup testGroup{ 1,timeSlots,50 };
-
 
 	std::vector <ActivityCategory> categories{};
 
