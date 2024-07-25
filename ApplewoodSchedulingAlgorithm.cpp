@@ -18,6 +18,7 @@ std::mt19937 mt{ ss }; //seeds merene twister using the generated seed sequence
 
 class Staff; //staff class prototype so it can be referred to in Activity
 
+//Represents each activity
 class Activity
 {
 
@@ -26,7 +27,10 @@ class Activity
 	std::vector <std::size_t> m_scheduleTimesAvailable{}; 
 	int m_timesPerCycle{}; //number of times this activity should occur in the generated schedule
 	int m_offset{}; //the offset of the randomly generated ranges for selecting random schedule slots
-	int m_activityID{}; //the unique id of the activity
+
+	//note: it is up to the intializer to ensure that the id of the activity is unique 
+	int m_activityID{}; //the unique id of the activity 
+
 	std::vector <Staff*> m_preferred{}; //a list of the staff who prefer to lead this activity
 	std::vector <Staff*> m_neutral{}; //a list of the staff who are neutral towards leading this activity
 	std::vector <Staff*> m_unpreferred{}; //a list of the staff who prefer not to lead this activity
@@ -69,33 +73,43 @@ public:
 		m_offset = randOffset(mt);
 	}
 
+	//gets a copy of the offset
 	constexpr int getOffset() const
 	{
 		return m_offset;
 	}
 
-	constexpr std::vector <std::size_t> getTimesAvailable() const
+	//gets timesAvailable array
+	const std::vector <std::size_t>& getTimesAvailable() const 
 	{
 		return m_timesAvailable;
 	}
-	constexpr std::size_t getTimesAvailable(std::size_t index) const
+
+	//gets a specific index of the timesAvailable array
+	constexpr std::size_t getTimesAvailable(const std::size_t index) const
 	{
 		return m_timesAvailable[index];
 	}
 
-	//returns total time available
+	//gets the number of elements in the timesAvailable array
 	constexpr std::size_t getTotalTimesAvailable() const
 	{
 		return m_timesAvailable.size();
 	}
+
+	//gets this activity's name
 	constexpr std::string_view getName() const
 	{
 		return m_activityName;
 	}
+
+	//gets how many times this activity should occur
 	constexpr int getTimesPerCycle() const
 	{
 		return m_timesPerCycle;
 	}
+
+	//gets the unique ID of this activity
 	constexpr int getActivityID() const
 	{
 		return m_activityID;
@@ -104,27 +118,25 @@ public:
 };
 
 
+//Represents each cateogry of activities
 class ActivityCategory
 {
-	std::string m_activityCategoryName{};
-	std::vector<Activity> m_activities{};
-	int m_timesPerCycle{};
-	int m_categoryIndex{ 0 };
-	int m_activityCounter{ -1 };
+	std::string m_activityCategoryName{}; //the name of the activity category
+	std::vector<Activity> m_activities{}; //a list of the activities contained within the category
+	int m_timesPerCycle{ 0 }; //the number of times this activity category should appear
+	std::size_t m_activityCounter{ 0 }; //holds index of next activity in category to fill
 
 
 public:
 
-	//creates ActivityCategory
-	ActivityCategory(std::string_view activityCategoryName, std::vector<Activity>& activities, int timesPerCycle)
-		:m_activities{ std::move(activities) },
+	//creates ActivityCategory using its name and an array of its activities
+	ActivityCategory(std::string_view activityCategoryName, std::vector<Activity>& activities)
+		:m_activities{ std::move(activities) }, //activities are moved to save computing costs of copying the list
 		m_activityCategoryName{ activityCategoryName },
-		m_timesPerCycle{ timesPerCycle },
-		m_categoryIndex{ 0 },
-		m_activityCounter{ -1 }
+		m_activityCounter{ 0 }
 	{
 
-		//sorts activities in category by their availibity
+		//sorts activities in category by their availibity, ascending
 		std::sort(m_activities.begin(), m_activities.end(),
 			[](Activity& a1, Activity& a2)
 			{
@@ -132,53 +144,61 @@ public:
 					return true;
 				return false;
 			});
+
+
+		//calculates how many times the category should occur as a sum of how many times its activities occur
+		for (const auto& activity : m_activities)
+		{
+			m_timesPerCycle += activity.getTimesPerCycle();
+		}
 	}
-	void incActivityCounter()
+
+	//long term this should probably be removed
+	//increments the activity counter
+	constexpr void incActivityCounter()
 	{
 		++m_activityCounter;
 	}
+
+	//long term this should probably be removed
+	//gets next activity to fill
 	Activity* getNextActivity()
 	{
-		std::cerr << 'r' << m_activityCounter;
 		return  &(getActivities()[m_activityCounter]);
 	}
 
+	//gets a copy of  how many times this activity category should occur
 	constexpr int getTimesPerCycle() const
 	{
 		return m_timesPerCycle;
 	}
+
+	//gets the name of the activity category
 	constexpr std::string_view getName() const
 	{
 		return m_activityCategoryName;
 	}
+
+	//gets the array of activities belonging to thisa ctivity category
 	constexpr std::vector<Activity>& getActivities()
 	{
 		return m_activities;
 	}
 
-	constexpr int getCategoryIndex() const
-	{
-		return m_categoryIndex;
-	}
 
-	void incCategoryIndex()
-	{
-		++m_categoryIndex;
-	}
 
 };
 
 
+//Represents each schedule time period
 class ScheduleSlot
 {
-	std::vector<Activity*> m_possibleActivities{};
+	std::vector<Activity*> m_possibleActivities{}; //a list of all activities which can possibly occur in this slot
+	std::vector <Staff*> m_availableToLead{}; //a list of staff members who are available to lead in this slot
 	//Group* group{};
-	std::vector <Staff*> m_preferred{};
-	std::vector <Staff*> m_neutral{};
-	std::vector <Staff*> m_unpreferred{};
-	Activity* m_activity{ nullptr };
-	ActivityCategory* m_activityCategory{ nullptr };
-	int m_id;
+	Activity* m_activity{ nullptr }; //the activity which occurs in this slot
+	ActivityCategory* m_activityCategory{ nullptr }; //the activity catepgry which occurs in this slot
+	int m_id; //the unique id of this schedule slot
 
 public:
 	static int id;
@@ -194,7 +214,6 @@ public:
 	{
 		m_activityCategory = &cat;
 		m_activity = cat.getNextActivity();
-		(*m_activityCategory).incCategoryIndex();
 	}
 
 	constexpr Activity* getActivity() const
@@ -210,6 +229,11 @@ public:
 	constexpr int getID() const
 	{
 		return id;
+	}
+
+	constexpr void addAvailableToLead(Staff* staff)
+	{
+		m_availableToLead.push_back(staff);
 	}
 
 };
@@ -228,13 +252,17 @@ class Staff
 public:
 
 	//Staff constructor, memberwise initialization of all member variables
-	Staff(const std::string_view name, const std::vector<ScheduleSlot*> timesAvailable, const std::vector <Activity*> preferred, const std::vector <Activity*> neutral, const std::vector <Activity*> unpreferred)
+	Staff(const std::string_view name, std::vector<ScheduleSlot*> timesAvailable, const std::vector <Activity*> preferred, const std::vector <Activity*> neutral, const std::vector <Activity*> unpreferred)
 		: m_name{name},
-		m_timesAvailableToLead{ timesAvailable },
+		m_timesAvailableToLead{ std::move(timesAvailable) },
 		m_preferred{ preferred },
 		m_neutral{ neutral },
 		m_unpreferred{ unpreferred }
-	{}
+	{
+		//adds this staff to avaialble the available to lead lsit of every slot it is available to lead in
+		for (const auto& slot : timesAvailable)
+			slot->addAvailableToLead(this);
+	}
 };
 
 
@@ -360,7 +388,6 @@ public:
 		for (int activities{ 0 }; activities < static_cast<int>(activityCategory.getActivities().size()); ++activities) //fill a total of idealSlots slots
 		{
 			std::cerr << '?' << activities << ' ' << static_cast<int>(activityCategory.getActivities().size()) << "?\n";
-			activityCategory.incActivityCounter();
 			Activity* activity{ activityCategory.getNextActivity() };
 
 			activity->setOffset(m_timeSlots);
@@ -379,6 +406,7 @@ public:
 				unfilledSlots.erase((std::find(unfilledSlots.begin(), unfilledSlots.end(), slotIndex))); //removes slot from unfilled slots vector
 			}
 			int a{ 4 };
+			activityCategory.incActivityCounter();
 
 		}
 	}
@@ -490,7 +518,7 @@ void getValues(std::string& line, std::vector<std::size_t>& fillVector)
 
 		std::size_t startRange{ static_cast<std::size_t>(std::stoi(line.substr(0, line.find('-')))) - 1 };//gets start of range
 		std::size_t endRange{ static_cast<std::size_t>(std::stoi(line.substr(line.find('-') + 1,endpoint(line)))) - 1 }; //gets end of range
-		for (std::size_t index{ startRange }; index <= endRange; ++index) //while within range update time availble to true and iterate total times available
+		for (std::size_t index{ startRange }; index <= endRange; ++index) //while within range update time available to true and iterate total times available
 		{
 			fillVector.push_back(index); //adds index to list of values in vector
 		}
@@ -500,17 +528,17 @@ void getValues(std::string& line, std::vector<std::size_t>& fillVector)
 
 void getStrings(std::string_view line, std::vector<std::string>& fillVector)
 {
-	std::size_t(*endpoint)(std::string_view)(&findNextSemi);
-	bool loopAgain{ true };
+	std::size_t(*endpoint)(std::string_view)(&findNextSemi); //initializes endpoint function pointer and sets it to point to find next semi
+	bool loopAgain{ true }; //controls whether or not the loop will continue iterating
 	while (loopAgain)	//loops while more time available ranges exist (while dividers exist plus once more)
 	{
 		if (line.find(':') == std::string::npos)//if range divider does not exist, stop looping after this iteration and search for boundary to times per cycle instead of between ranges
 		{
-			loopAgain = false;
-			endpoint = &findEnd;
+			loopAgain = false; //stop iterating (this is the last range)
+			endpoint = &findEnd; //set endpoint to comma (since that is the divider between csv columns)
 		}
 
-		fillVector.emplace_back(line.substr(0, endpoint(line)));
+		fillVector.emplace_back(line.substr(0, endpoint(line))); //adds index to list of values in vector
 		line = line.substr(endpoint(line) + 1, line.size() - endpoint(line)); //remove range added from range list
 	}
 }
@@ -519,32 +547,34 @@ void getStrings(std::string_view line, std::vector<std::string>& fillVector)
 int addActivity(std::string line, std::vector <Activity>& activities, const int activityID)
 {
 	std::size_t comma{ line.find(',') }; //find break between activity name and activity times available
-	std::string activityName{ line.substr(0,comma) };
+	std::string activityName{ line.substr(0,comma) }; //stores activity name
 	line = line.substr(comma + 1, line.size() - comma - 1); //removes activty name from line
 
 
 	std::vector < std::size_t > timesAvailable{};//array storing if activity is available at each time slot
 
 
-	getValues(line, timesAvailable);
+	getValues(line, timesAvailable); //gets times available from line and adds it to times avaliable vector
 
-	int timesPerCycle{ std::stoi(line) };
+	int timesPerCycle{ std::stoi(line) }; //rest of line after times avaible is times per cycle
 
 	activities.push_back(Activity(activityName, timesAvailable, timesPerCycle, activityID)); //add activity to activities array
 	return timesPerCycle;
 }
 
-//add activity cateogry to categories vector
-void createActivityCategory(std::vector <ActivityCategory>& categories, std::string_view category, std::vector<Activity>& activities, int timesPerCycle)
+//add activity category to categories vector
+//note: activities is non const since ActivityCategory intializer moves activity to its list of activities
+void createActivityCategory(std::vector <ActivityCategory>& categories, std::string_view category, std::vector<Activity>& activities)
 {
-	std::sort(activities.begin(), activities.end(), [](Activity first, Activity second)
+	std::sort(activities.begin(), activities.end(), [](Activity first, Activity second) //sorts activity list by total times available
 		{
 			return first.getTotalTimesAvailable() < second.getTotalTimesAvailable();
 		});
-	categories.push_back(ActivityCategory(category, activities, timesPerCycle));
+	categories.push_back(ActivityCategory(category, activities));
 }
 
 //takes in a lsit of activity anmes to search for and the list of activity categories and fills a list of pointers to those activities
+//note categories cannot be const since their activities are added to the activity list which may later be changed via their pointer
 void getActivities(const std::vector<std::string>& activityNames, std::vector<Activity*> &activities, std::vector <ActivityCategory>& categories)
 {
 	for (std::size_t i{ 0 }; i < activityNames.size(); ++i) //loops through all activities we are searching for
@@ -567,18 +597,20 @@ void getActivities(const std::vector<std::string>& activityNames, std::vector<Ac
 	}
 }
 
+//initializes static array scheduleSlots before use
 std::array<ScheduleSlot, daysInCycle* periodsInDay> ParticipantGroup::scheduleSlots{};
 
-void getScheduleSlots(const std::vector<std::size_t> avail, std::vector<ScheduleSlot*> timesAvailable)
+//takes in list of avilable times for a staff to elad at and adds a pointer to the schedule slot at each of those times to the scheduleSlotsAvailable list
+void getScheduleSlots(const std::vector<std::size_t> avail, std::vector<ScheduleSlot*> scheduleSlotsAvailable)
 {
 	for (std::size_t i{ 0 }; i < avail.size(); ++i)
 	{
-		timesAvailable.push_back(&ParticipantGroup::scheduleSlots[i]);
+		scheduleSlotsAvailable.push_back(&ParticipantGroup::scheduleSlots[i]);
 	}
 }
 
 //takes in a string and a breakpoint and fiils the inputted activity pointers vector with activity pointers to the activites found within the string
-void processActivitiesListFromFileToVectorofActivityPointers(const std::string_view line, std::vector<Activity*> &activityPointers, std::vector <ActivityCategory>& categories, const std::size_t breakLocation)
+void processActivitiesListFromFileToVectorofActivityPointers(std::string_view line, std::vector<Activity*> &activityPointers, std::vector <ActivityCategory>& categories, const std::size_t breakLocation)
 {
 	std::string raw{ line.substr(0,breakLocation) };  //hold raw list of activities
 	std::vector<std::string> names{}; //holds list of activities names
@@ -586,6 +618,8 @@ void processActivitiesListFromFileToVectorofActivityPointers(const std::string_v
 	getActivities(names, activityPointers, categories); //gets list of pointers to activities using their names and fills activity pointers vector
 }
 
+//rads in staff from file and stores in the staff vector
+//note cateogries is non const due to getActivities
 void readInStaff(std::ifstream& myReader, std::vector <ActivityCategory>& categories, std::vector <Staff> &staff)
 {
 	std::string line{};//holds line data
@@ -626,7 +660,7 @@ void readInStaff(std::ifstream& myReader, std::vector <ActivityCategory>& catego
 		std::vector<ScheduleSlot*> timesAvailable{}; //holds pointers to the schedule slots corresponding to the times the staff can lead at
 		getScheduleSlots(availableTimes, timesAvailable); //fills the list of pointers using the indecies of the times that the staff can lead at 
 
-		staff.emplace_back(name, timesAvailable, preferred, neutral, unpreferred);
+		staff.emplace_back(name, timesAvailable, preferred, neutral, unpreferred); //adds staff member to staff vector
 
 	}
 }
@@ -660,15 +694,14 @@ int readInActivityCategories(std::vector <ActivityCategory>& categories, std::ve
 
 			if (category != prevCategory && prevCategory != "") //if category is new (not first category)
 			{
-				createActivityCategory(categories, prevCategory, activities, timesPerCycle); //create previous activity category
-				timesPerCycle = 0; //resets number of times avctivity cateogry will occur
+				createActivityCategory(categories, prevCategory, activities); //create previous activity category
 				activities.clear(); //reset activities
 			}
 			prevCategory = category; //ensures category is updated (important for first iteration)
 			timesPerCycle += addActivity(line.substr(comma + 1, line.size() - comma - 1), activities, activityID); //adds activity using line excluidng activity category information
 			++activityID; //iterates activity id
 		}
-		createActivityCategory(categories, prevCategory, activities, timesPerCycle); //creates final activity category
+		createActivityCategory(categories, prevCategory, activities); //creates final activity category
 		readInStaff(myReader, categories,staff); //reads in staff
 	}
 	catch (const char* errorMessage) //if file could not be opened
