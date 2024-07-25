@@ -21,6 +21,7 @@ class Staff; //staff class prototype so it can be referred to in Activity
 //Represents each activity
 class Activity
 {
+	ActivityCategory* m_activityCategory{}; //holds a pointer to the activity category which this activity belongs to
 
 	std::string m_activityName{}; //the display name of the activity
 	std::vector <std::size_t> m_timesAvailable{}; //holds the indices of the schedule slots where this activity can occur
@@ -47,7 +48,7 @@ public:
 		m_activityID{ activityID }
 	{}
 
-
+	//long term should likely be removed
 	void setOffset(std::vector <int>& timeSlots)
 	{
 		std::size_t timesAvailableIndex{ 0 };
@@ -115,6 +116,12 @@ public:
 		return m_activityID;
 	}
 
+	//sets the activity category of this activity
+	void setActivityCategory(ActivityCategory* activityCategory)
+	{
+		m_activityCategory = activityCategory;
+	}
+
 };
 
 
@@ -146,10 +153,11 @@ public:
 			});
 
 
-		//calculates how many times the category should occur as a sum of how many times its activities occur
-		for (const auto& activity : m_activities)
+		
+		for (auto& activity : m_activities)
 		{
-			m_timesPerCycle += activity.getTimesPerCycle();
+			m_timesPerCycle += activity.getTimesPerCycle(); //calculates how many times the category should occur as a sum of how many times its activities occur
+			activity.setActivityCategory(this); //sets each activity's activity category to this activity category
 		}
 	}
 
@@ -201,36 +209,41 @@ class ScheduleSlot
 	int m_id; //the unique id of this schedule slot
 
 public:
-	static int id;
+	static int id; //holds id of next schedule slot
 
+	//intializes schedule slot, assigns id and iterates next id
 	ScheduleSlot()
 		:m_id{ id }
 	{
 		++id;
 	}
 
-
+	//adds activity category to the slot
 	void addActivityCategory(ActivityCategory& cat)
 	{
 		m_activityCategory = &cat;
 		m_activity = cat.getNextActivity();
 	}
 
+	//gets a pointer to the activity in the slot
 	constexpr Activity* getActivity() const
 	{
 		return m_activity;
 	}
 
+	//gets a pointer to the activity category in the slot
 	constexpr ActivityCategory* getActivityCategory() const
 	{
 		return m_activityCategory;
 	}
 
+	//gets a copy of the id in the slot
 	constexpr int getID() const
 	{
 		return id;
 	}
 
+	//adds a staff to the availableToLead array
 	constexpr void addAvailableToLead(Staff* staff)
 	{
 		m_availableToLead.push_back(staff);
