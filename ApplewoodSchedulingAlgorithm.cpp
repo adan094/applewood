@@ -17,16 +17,28 @@ std::seed_seq ss{ rd(), rd(), rd(), rd(), rd(), rd(), rd(), rd() }; //generates 
 std::mt19937 mt{ ss }; //seeds merene twister using the generated seed sequence
 
 class Staff; //staff class prototype so it can be referred to in Activity
+class ActivityCategory; //Activity Category class prototype so it can be referred to in Activity
+
+class ActivityAndScheduleSlotWrapper
+{
+public:
+
+	//made int to prevent underflow errors in its children classes
+	virtual constexpr int getNumberToDiscard() const = 0; //gets number of options to be discarded before filling the spot
+	virtual const int getAvailableStaffToLead() const = 0; //gets staff leaders available to fill this spot
+	virtual constexpr int getSpotsLeftToFill() const = 0; //spots left to fill
+};
 
 //Represents each activity
-class Activity
+class Activity :public ActivityAndScheduleSlotWrapper
 {
-	ActivityCategory* m_activityCategory{}; //holds a pointer to the activity category which this activity belongs to
+	ActivityCategory* m_activityCategory{ nullptr }; //holds a pointer to the activity category which this activity belongs to
 
 	std::string m_activityName{}; //the display name of the activity
 	std::vector <std::size_t> m_timesAvailable{}; //holds the indices of the schedule slots where this activity can occur
 	std::vector <std::size_t> m_scheduleTimesAvailable{}; 
 	int m_timesPerCycle{}; //number of times this activity should occur in the generated schedule
+	int m_timesLeftPerCycle{}; //how many more of this activity should occur
 	int m_offset{}; //the offset of the randomly generated ranges for selecting random schedule slots
 
 	//note: it is up to the intializer to ensure that the id of the activity is unique 
@@ -45,6 +57,7 @@ public:
 		: m_activityName{ activityName },
 		m_timesAvailable{ std::move(timesAvailable) }, //times available is moved to save computing costs of copying the list
 		m_timesPerCycle{ timesPerCycle },
+		m_timesLeftPerCycle{ timesPerCycle },
 		m_activityID{ activityID }
 	{}
 
@@ -120,6 +133,24 @@ public:
 	void setActivityCategory(ActivityCategory* activityCategory)
 	{
 		m_activityCategory = activityCategory;
+	}
+
+	//Discarded options in activity are spots - number of spots to fill
+	constexpr int getNumberToDiscard() const
+	{
+		return static_cast<int>(m_timesAvailable.size())-m_timesLeftPerCycle+1;
+	}
+
+	//only staff listed in preferred, neutral or unpreferred are able to lead the activity
+	const int getAvailableStaffToLead() const
+	{
+		return static_cast<int>(m_preferred.size() + m_neutral.size() + m_unpreferred.size());
+	}
+
+	//gets spots left to fill
+	virtual constexpr int getSpotsLeftToFill() const
+	{
+		return m_timesLeftPerCycle;
 	}
 
 };
@@ -199,7 +230,7 @@ public:
 
 
 //Represents each schedule time period
-class ScheduleSlot
+class ScheduleSlot : public ActivityAndScheduleSlotWrapper
 {
 	std::vector<Activity*> m_possibleActivities{}; //a list of all activities which can possibly occur in this slot
 	std::vector <Staff*> m_availableToLead{}; //a list of staff members who are available to lead in this slot
@@ -247,6 +278,27 @@ public:
 	constexpr void addAvailableToLead(Staff* staff)
 	{
 		m_availableToLead.push_back(staff);
+	}
+
+	//Discarded options in schedule slot are possible activities to fill the slot -1
+	constexpr int getNumberToDiscard() const
+	{
+		return static_cast<int>(m_possibleActivities.size())-1;
+	}
+
+	//gets copy of number of staff available to lead at this slot's time
+	const int getAvailableStaffToLead() const
+	{
+		return static_cast<int>(m_availableToLead.size());
+	}
+
+	//schedule's only ever require 1 spot to fill (unless they are already filled)
+	virtual constexpr int getSpotsLeftToFill() const
+	{
+		if (!m_activity) //if nullptr ==> activity slot hasn't been filled yet
+			return 0;
+		else
+			return 1;
 	}
 
 };
