@@ -29,6 +29,51 @@ public:
 	virtual constexpr int getSpotsLeftToFill() const = 0; //spots left to fill
 };
 
+class FillSpot
+{
+	std::vector < ActivityAndScheduleSlotWrapper*> m_spotsToBeFilled; //Holds all the activities and schedule slots to be filled
+
+	//the spots with the least variation of options of places to go should be filled first, ties should be solved by least available staff to lead, then most spots left to fill
+	//sorts by how soon the slot should be filled
+	void initialSort()
+	{
+		std::sort(m_spotsToBeFilled.begin(), m_spotsToBeFilled.end(), [](ActivityAndScheduleSlotWrapper* spot1, ActivityAndScheduleSlotWrapper* spot2)
+			{
+				int numberToDiscardDifference{ spot1->getNumberToDiscard() - spot2->getNumberToDiscard() }; //first sort by spots with least places options of places to go
+				if (numberToDiscardDifference > 0)
+					return true;
+				else if (numberToDiscardDifference < 0)
+					return false;
+
+				int availableStaffToLeadDifference{ spot1->getAvailableStaffToLead() - spot2->getAvailableStaffToLead() }; //break ties by least available staff to lead
+				if (availableStaffToLeadDifference > 0)
+					return true;
+				else if (availableStaffToLeadDifference < 0)
+					return false;
+
+				else if (spot1->getSpotsLeftToFill() > spot2->getSpotsLeftToFill()) //break further ties by most spots left to fill
+					return true;
+				else
+					return false;
+			});
+	}
+
+public:
+
+	//initializes the fillspot list of schedule slots and activities and sorts by how soon the slot should be filled
+	FillSpot(const std::vector < ActivityAndScheduleSlotWrapper*>& activities, std::vector < ActivityAndScheduleSlotWrapper*>& scheduleSlots)
+		:m_spotsToBeFilled{ std::move(scheduleSlots) } //moves scheduleSlots to spotsToBeFilled for efficiency
+	{
+		for (const auto activity : activities) //adds all activities to spotsToBeFilled
+		{
+			m_spotsToBeFilled.push_back(activity);
+		}
+
+		initialSort(); //sorts by how soon the slot should be filled
+
+	}
+};
+
 //Represents each activity
 class Activity :public ActivityAndScheduleSlotWrapper
 {
