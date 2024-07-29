@@ -32,22 +32,29 @@ public:
 	virtual constexpr int getID() const = 0; //object's unique id
 
 	//the spots with the least variation of options of places to go should be filled first, ties should be solved by least available staff to lead, then most spots left to fill
-	//spots are valued absed upon on soon they should be filled (soonest = lowest)
+	//spots are valued based upon on soon they should be filled (soonest = lowest)
 	friend bool operator> (ActivityAndScheduleSlotWrapper& spot1, ActivityAndScheduleSlotWrapper& spot2)
 	{
-		int numberToDiscardDifference{ spot1.getNumberToDiscard() - spot2.getNumberToDiscard() }; //first sort by spots with most options of places to go
+		//sorts by largest minimum options of places to go or staff available
+		int minAvailableDifference{ std::min(spot1.getNumberToDiscard(),spot1.getAvailableStaffToLead()) - std::min(spot2.getNumberToDiscard(),spot2.getAvailableStaffToLead()) };
+		if (minAvailableDifference > 0)
+			return true;
+		else if (minAvailableDifference < 0)
+			return false;
+
+		int numberToDiscardDifference{ spot1.getNumberToDiscard() - spot2.getNumberToDiscard() }; //break ties by spots with most options of places to go
 		if (numberToDiscardDifference > 0)
 			return true;
 		else if (numberToDiscardDifference < 0)
 			return false;
 
-		int availableStaffToLeadDifference{ spot1.getAvailableStaffToLead() - spot2.getAvailableStaffToLead() }; //break ties by most available staff to lead
+		int availableStaffToLeadDifference{ spot1.getAvailableStaffToLead() - spot2.getAvailableStaffToLead() }; //break ties further by most available staff to lead
 		if (availableStaffToLeadDifference > 0)
 			return true;
 		else if (availableStaffToLeadDifference < 0)
 			return false;
 
-		else if (spot1.getSpotsLeftToFill() < spot2.getSpotsLeftToFill()) //break further ties by least spots left to fill
+		else if (spot1.getSpotsLeftToFill() < spot2.getSpotsLeftToFill()) //break remaining ties by least spots left to fill
 			return true;
 		else
 			return false;
@@ -55,19 +62,26 @@ public:
 
 	friend bool operator< (ActivityAndScheduleSlotWrapper& spot1, ActivityAndScheduleSlotWrapper& spot2)
 	{
-		int numberToDiscardDifference{ spot1.getNumberToDiscard() - spot2.getNumberToDiscard() }; //first sort by spots with least options of places to go
+		//sorts by smallest minimum options of places to go or staff available
+		int minAvailableDifference{ std::min(spot1.getNumberToDiscard(),spot1.getAvailableStaffToLead()) - std::min(spot2.getNumberToDiscard(),spot2.getAvailableStaffToLead()) };
+		if (minAvailableDifference < 0)
+			return true;
+		else if (minAvailableDifference > 0)
+			return false;
+
+		int numberToDiscardDifference{ spot1.getNumberToDiscard() - spot2.getNumberToDiscard() }; //break ties by spots with least options of places to go
 		if (numberToDiscardDifference < 0)
 			return true;
 		else if (numberToDiscardDifference > 0)
 			return false;
 
-		int availableStaffToLeadDifference{ spot1.getAvailableStaffToLead() - spot2.getAvailableStaffToLead() }; //break ties by least available staff to lead
+		int availableStaffToLeadDifference{ spot1.getAvailableStaffToLead() - spot2.getAvailableStaffToLead() }; //break ties further by least available staff to lead
 		if (availableStaffToLeadDifference < 0)
 			return true;
 		else if (availableStaffToLeadDifference > 0)
 			return false;
 
-		else if (spot1.getSpotsLeftToFill() < spot2.getSpotsLeftToFill()) //break further ties by most spots left to fill
+		else if (spot1.getSpotsLeftToFill() < spot2.getSpotsLeftToFill()) //break remaining ties by most spots left to fill
 			return true;
 		else
 			return false;
