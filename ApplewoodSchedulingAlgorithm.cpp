@@ -18,6 +18,7 @@ std::mt19937 mt{ ss }; //seeds merene twister using the generated seed sequence
 
 class Staff; //staff class prototype so it can be referred to in Activity
 class ActivityCategory; //Activity Category class prototype so it can be referred to in Activity
+class ScheduleSlot; //Schedule Slot class prototype so it can be referred to in Activity
 
 class ActivityAndScheduleSlotWrapper
 {
@@ -27,6 +28,50 @@ public:
 	virtual constexpr int getNumberToDiscard() const = 0; //gets number of options to be discarded before filling the spot
 	virtual const int getAvailableStaffToLead() const = 0; //gets staff leaders available to fill this spot
 	virtual constexpr int getSpotsLeftToFill() const = 0; //spots left to fill
+	virtual constexpr std::string getType() = 0; //object type
+	virtual constexpr int getID() const = 0; //object's unique id
+
+	//the spots with the least variation of options of places to go should be filled first, ties should be solved by least available staff to lead, then most spots left to fill
+	//spots are valued absed upon on soon they should be filled (soonest = lowest)
+	friend bool operator> (ActivityAndScheduleSlotWrapper& spot1, ActivityAndScheduleSlotWrapper& spot2)
+	{
+		int numberToDiscardDifference{ spot1.getNumberToDiscard() - spot2.getNumberToDiscard() }; //first sort by spots with most options of places to go
+		if (numberToDiscardDifference > 0)
+			return true;
+		else if (numberToDiscardDifference < 0)
+			return false;
+
+		int availableStaffToLeadDifference{ spot1.getAvailableStaffToLead() - spot2.getAvailableStaffToLead() }; //break ties by most available staff to lead
+		if (availableStaffToLeadDifference > 0)
+			return true;
+		else if (availableStaffToLeadDifference < 0)
+			return false;
+
+		else if (spot1.getSpotsLeftToFill() < spot2.getSpotsLeftToFill()) //break further ties by least spots left to fill
+			return true;
+		else
+			return false;
+	}
+
+	friend bool operator< (ActivityAndScheduleSlotWrapper& spot1, ActivityAndScheduleSlotWrapper& spot2)
+	{
+		int numberToDiscardDifference{ spot1.getNumberToDiscard() - spot2.getNumberToDiscard() }; //first sort by spots with least options of places to go
+		if (numberToDiscardDifference < 0)
+			return true;
+		else if (numberToDiscardDifference > 0)
+			return false;
+
+		int availableStaffToLeadDifference{ spot1.getAvailableStaffToLead() - spot2.getAvailableStaffToLead() }; //break ties by least available staff to lead
+		if (availableStaffToLeadDifference < 0)
+			return true;
+		else if (availableStaffToLeadDifference > 0)
+			return false;
+
+		else if (spot1.getSpotsLeftToFill() < spot2.getSpotsLeftToFill()) //break further ties by most spots left to fill
+			return true;
+		else
+			return false;
+	}
 };
 
 
@@ -49,6 +94,8 @@ class Activity :public ActivityAndScheduleSlotWrapper
 	std::vector <Staff*> m_preferred{}; //a list of the staff who prefer to lead this activity
 	std::vector <Staff*> m_neutral{}; //a list of the staff who are neutral towards leading this activity
 	std::vector <Staff*> m_unpreferred{}; //a list of the staff who prefer not to lead this activity
+
+	std::vector <ScheduleSlot*> m_slots{}; //a list of the slots filled by this activity
 
 public:
 
@@ -96,7 +143,7 @@ public:
 	}
 
 	//gets timesAvailable array
-	const std::vector <std::size_t>& getTimesAvailable() const 
+	std::vector <std::size_t>& getTimesAvailable()
 	{
 		return m_timesAvailable;
 	}
@@ -126,7 +173,7 @@ public:
 	}
 
 	//gets the unique ID of this activity
-	constexpr int getActivityID() const
+	constexpr int getID() const
 	{
 		return m_activityID;
 	}
@@ -154,6 +201,28 @@ public:
 	{
 		return m_timesLeftPerCycle;
 	}
+
+	//Returns the type (for parent container type checking)
+	constexpr std::string getType()
+	{
+		return "Activity";
+	}
+
+	//adds this activity to a given schedule slot
+	void addSlot(ScheduleSlot * slot)
+	{
+		m_slots.push_back(slot); //adds to schedule slot list
+
+		if (m_timesLeftPerCycle < 0) //make sure there are still activities left to add
+			throw "CANNOT ADD EMPTY FILLED ACTIVITY";
+
+		--m_timesLeftPerCycle; //removes 1 from times left per cycle
+		removeSlot(slot); //removes slot from available list
+	}
+
+	//removes schedule slot from list of available slots
+	void removeSlot(ScheduleSlot* slot);
+
 
 };
 
@@ -295,7 +364,7 @@ public:
 	}
 
 	//schedule's only ever require 1 spot to fill (unless they are already filled)
-	virtual constexpr int getSpotsLeftToFill() const
+	constexpr int getSpotsLeftToFill() const
 	{
 		if (!m_activity) //if nullptr ==> activity slot hasn't been filled yet
 			return 0;
@@ -303,7 +372,30 @@ public:
 			return 1;
 	}
 
+	//Returns the type (for parent container type checking)
+	constexpr std::string getType()
+	{
+		return "ScheduleSlot";
+	}
+
+	constexpr std::vector<Activity*>* getPossibleActivities()
+	{
+		return &m_possibleActivities;
+	}
+
+	void addActivity(std::size_t index)
+	{
+
+	}
+
 };
+
+//defined here since it uses schedule slot which needs to eb defined before it can be used
+//removes schedule slot from list of available slots
+void Activity::removeSlot(ScheduleSlot* slot)
+{
+	m_timesAvailable.erase(m_timesAvailable.begin() + slot->getID());
+}
 
 //stores staff members
 class Staff
@@ -326,8 +418,8 @@ public:
 		m_neutral{ neutral },
 		m_unpreferred{ unpreferred }
 	{
-		//adds this staff to avaialble the available to lead lsit of every slot it is available to lead in
-		for (const auto& slot : timesAvailable)
+		//adds this staff to avaialble the available to lead list of every slot it is available to lead in
+		for (const auto& slot : m_timesAvailableToLead)
 			slot->addAvailableToLead(this);
 	}
 };
@@ -335,33 +427,109 @@ public:
 
 class FillSpot
 {
+
+	//prevents typos from causes bugs
+	enum sortDirection //possible sort directions of update sort
+	{
+		either,
+		decreased
+	};
+
 	std::vector < ActivityAndScheduleSlotWrapper*> m_spotsToBeFilled; //Holds all the activities and schedule slots to be filled
 	std::vector <Activity> m_activities; //Holds activities and ensures tehir existence for the lifetime of the class
 	std::vector <ScheduleSlot> m_scheduleSlots; //Holds schedule slots and ensures tehir existence for the lifetime of the class
 
-	//the spots with the least variation of options of places to go should be filled first, ties should be solved by least available staff to lead, then most spots left to fill
-	//sorts by how soon the slot should be filled
-	void initialSort()
+	//moves the given spot within the spots to filled list (this allows the list to be efficiently resorted after a spot is added)
+	void updateSort(ActivityAndScheduleSlotWrapper* spot, sortDirection direction)
 	{
-		std::sort(m_spotsToBeFilled.begin(), m_spotsToBeFilled.end(), [](ActivityAndScheduleSlotWrapper *spot1, ActivityAndScheduleSlotWrapper *spot2)
+		std::size_t currentIndex{ 0 };
+		for (; currentIndex < m_spotsToBeFilled.size(); ++currentIndex) //gets the index of the given spot in the spotsToBeFileld array
+		{
+			if (spot->getType() == m_spotsToBeFilled[currentIndex]->getType() && spot->getID() == m_spotsToBeFilled[currentIndex]->getID())
+				break;
+		}
+		if (currentIndex == m_spotsToBeFilled.size()) //if the spot is not found there must be a logic error since all spots should be in the list
+			throw "spot not found in list, logic error";
+		if (direction == either) //if the direction is either, set it to decreased if the element in from of it is less than it otherwise it can be checked using increased
+		{
+			if (currentIndex > 0)
 			{
-				int numberToDiscardDifference{ spot1->getNumberToDiscard() - spot2->getNumberToDiscard() }; //first sort by spots with least places options of places to go
-				if (numberToDiscardDifference > 0)
-					return true;
-				else if (numberToDiscardDifference < 0)
-					return false;
-
-				int availableStaffToLeadDifference{ spot1->getAvailableStaffToLead() - spot2->getAvailableStaffToLead() }; //break ties by least available staff to lead
-				if (availableStaffToLeadDifference > 0)
-					return true;
-				else if (availableStaffToLeadDifference < 0)
-					return false;
-
-				else if (spot1->getSpotsLeftToFill() > spot2->getSpotsLeftToFill()) //break further ties by most spots left to fill
-					return true;
+				if (m_spotsToBeFilled[currentIndex] < m_spotsToBeFilled[currentIndex - 1])
+					direction = decreased;
+			}
+		}
+		if (direction == decreased) //if the value has decreased move it in front of values which it is not less than (should skip in the queue)
+		{
+			while (currentIndex > 0)
+			{
+				if (m_spotsToBeFilled[currentIndex] < m_spotsToBeFilled[currentIndex - 1])
+					std::swap(m_spotsToBeFilled[currentIndex], m_spotsToBeFilled[currentIndex - 1]);
 				else
-					return false;
-			});
+					break;
+			}
+		}
+		else //if the value has increased move it in behind values which it is greater than (should fall behind in the queue)
+		{
+			while (currentIndex < m_spotsToBeFilled.size()-1)
+			{
+				if (m_spotsToBeFilled[currentIndex] > m_spotsToBeFilled[currentIndex + 1])
+					std::swap(m_spotsToBeFilled[currentIndex], m_spotsToBeFilled[currentIndex + 1]);
+				else
+					break;
+			}
+		}
+	}
+
+	//adds an activity to the slot, updates activities that could have gone in the spot (and the one that did) and resorts spots to be filled
+	void addScheduleSlot(ScheduleSlot* slot)
+	{
+
+		std::vector <Activity*>* activities{ slot->getPossibleActivities() }; //gets a pointer to the list of possible activities for this slot
+
+		if (activities->size() == 0) //ensure there is at least one activity
+			throw "ERROR: NO ACTIVITIES CAN GO IN SCHEDULE SLOT" + slot->getID();
+
+		//add a random activity from the possible list to the slot
+		std::uniform_int_distribution randActivity{ 0,static_cast<int>(activities->size() - 1) };
+		int chosenActivityIndex{randActivity(mt)};
+		slot->addActivity(chosenActivityIndex);
+
+		//adds activity to chosen slot, removes slot from list of all other avialable activities at slot
+		for (std::size_t loopIndex{ 0 }; loopIndex < activities->size(); ++loopIndex)
+		{
+			if (chosenActivityIndex == loopIndex) //if chosen activity
+				(*activities)[chosenActivityIndex]->addSlot(slot); //adds slot to activity
+			else
+				(*activities)[chosenActivityIndex]->removeSlot(slot); //removes slot from available list
+		}
+
+		//loops through the list and resorts all subsection with the same activities to discard (since they all decrease by one they remain relatively unchanged)
+		int beginIndex{ 0 };
+		for (std::size_t index{ 1 }; index < activities->size(); ++index)
+		{
+			if ((*activities)[beginIndex]->getNumberToDiscard() < (*activities)[index]->getNumberToDiscard())
+			{
+				std::sort(activities->begin() + beginIndex, activities->begin() + index - 1); //sorts subsection
+				beginIndex = index; //assigns beginning of next subsection
+			}
+		}
+		std::sort(activities->begin() + beginIndex, activities->end()); //sorts final subsection
+
+		//since all activites are sorted, and they all decreased in value, they can decrease their positions until they hit the right spot if they are sorted in ascending order (except the chosen activity)
+		//resorts all activities in spots to be filled that have been updated in this function
+		for (auto* activity : *activities)
+		{
+			//the chosen activity's position an increase or decrease, all others can only decrease relative to unchanged spots.
+			if(activity->getType()==slot->getType() && activity->getID() == slot->getID())
+				updateSort(activity, either);
+			else
+				updateSort(activity, decreased);
+		}
+	}
+
+	void addActivity(Activity* activity)
+	{
+
 	}
 
 public:
@@ -382,8 +550,21 @@ public:
 			m_spotsToBeFilled.push_back(&scheduleSlot);
 		}
 
-		initialSort(); //sorts by how soon the slot should be filled
+		std::sort(m_spotsToBeFilled.begin(), m_spotsToBeFilled.end()); //sorts by how soon the slot should be filled
 
+	}
+
+	bool fillNextSpot() 
+	{
+		if (m_spotsToBeFilled.size() == 0) //if there are no more spots to fill return false
+			return false;
+
+		if (m_spotsToBeFilled[0]->getType() == "ScheduleSlot") //checks what type of pointer is in the first spot and fills in based on the type of object
+			addScheduleSlot(static_cast<ScheduleSlot*>(m_spotsToBeFilled[0]));
+		else
+			addActivity(static_cast<Activity*>(m_spotsToBeFilled[0]));
+
+		return true; //return true if there are still spots to be filled (including the one just filled)
 	}
 };
 
@@ -448,7 +629,7 @@ public:
 	}
 
 	//return index of random empty slot within range
-	int findEmptySlotInRange(const int range, const int idealSlots, const Activity* activity, std::vector<int>& slotsAvailable)
+	int findEmptySlotInRange(const int range, const int idealSlots, Activity* activity, std::vector<int>& slotsAvailable)
 	{
 		int slotIndex;
 		int endRand{ 0 };
@@ -466,7 +647,7 @@ public:
 	}
 
 	//finds an appropriate slot to add teh activity category to
-	int findSlot(const int idealSlots, const int offset, std::vector <int>& doneRanges, std::uniform_int_distribution<int>randRange, const std::vector < std::size_t >& unfilledSlots, const Activity* activity)
+	int findSlot(const int idealSlots, const int offset, std::vector <int>& doneRanges, std::uniform_int_distribution<int>randRange, const std::vector < std::size_t >& unfilledSlots, Activity* activity)
 	{
 		while (true) //loops until appropriate slot is found
 		{
@@ -514,7 +695,7 @@ public:
 			std::uniform_int_distribution randRange{ 0,idealSlots }; //random range
 
 			//fills activity category
-			int activityId{ activity->getActivityID() };
+			int activityId{ activity->getID() };
 			int activitySlotsLeft{ activity->getTimesPerCycle() - static_cast<int>(finishedRanges[activityId].size()) };
 
 
@@ -573,7 +754,7 @@ public:
 					}) - categories[activityCategory].getActivities().begin() };
 
 				//adds already filled range to array corresponding to it's activity category
-				finishedRanges[categories[activityCategory].getActivities()[activity].getActivityID()].push_back(index / categories[activityCategory].getActivities()[activity].getTimesPerCycle());
+				finishedRanges[categories[activityCategory].getActivities()[activity].getID()].push_back(index / categories[activityCategory].getActivities()[activity].getTimesPerCycle());
 			}
 		}
 
