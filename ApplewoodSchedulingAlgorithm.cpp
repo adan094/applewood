@@ -20,68 +20,80 @@ class Staff; //staff class prototype so it can be referred to in Activity
 class ActivityCategory; //Activity Category class prototype so it can be referred to in Activity
 class ScheduleSlot; //Schedule Slot class prototype so it can be referred to in Activity
 
-class ActivityAndScheduleSlotWrapper
+
+class SpotWrapper
 {
 public:
 
 	//made int to prevent underflow errors in its children classes
-	virtual constexpr int getNumberToDiscard() const = 0; //gets number of options to be discarded before filling the spot
-	virtual const int getAvailableStaffToLead() const = 0; //gets staff leaders available to fill this spot
+	virtual constexpr std::pair<int,int> getNumberToDiscard() const = 0; //gets number of options to be discarded before filling the spot
 	virtual constexpr int getSpotsLeftToFill() const = 0; //spots left to fill
 	virtual constexpr std::string getType() = 0; //object type
 	virtual constexpr int getID() const = 0; //object's unique id
 
 	//the spots with the least variation of options of places to go should be filled first, ties should be solved by least available staff to lead, then most spots left to fill
 	//spots are valued based upon on soon they should be filled (soonest = lowest)
-	friend bool operator> (ActivityAndScheduleSlotWrapper& spot1, ActivityAndScheduleSlotWrapper& spot2)
+	friend bool operator> (SpotWrapper& spot1, SpotWrapper& spot2)
 	{
-		//sorts by largest minimum options of places to go or staff available
-		int minAvailableDifference{ std::min(spot1.getNumberToDiscard(),spot1.getAvailableStaffToLead()) - std::min(spot2.getNumberToDiscard(),spot2.getAvailableStaffToLead()) };
-		if (minAvailableDifference > 0)
+		//gets the min and max of the pair of number to discard for each spot
+		int spot1Min{ std::get<0>(spot1.getNumberToDiscard())};
+		int spot1Max{ std::get<1>(spot1.getNumberToDiscard()) };
+		if (spot1Min > spot1Max)
+			std::swap(spot1Min, spot1Max);
+		int spot2Min{ std::get<0>(spot2.getNumberToDiscard()) };
+		int spot2Max{ std::get<1>(spot2.getNumberToDiscard()) };
+		if (spot2Min > spot2Max)
+			std::swap(spot2Min, spot2Max);
+
+
+
+		//sorts by largest minimum options to discard
+		if (spot1Min > spot2Min)
 			return true;
-		else if (minAvailableDifference < 0)
+		else if (spot1Min < spot2Min)
 			return false;
 
-		int numberToDiscardDifference{ spot1.getNumberToDiscard() - spot2.getNumberToDiscard() }; //break ties by spots with most options of places to go
-		if (numberToDiscardDifference > 0)
+		//breaks ties by largest largest options to discard
+		if (spot1Max > spot2Max)
 			return true;
-		else if (numberToDiscardDifference < 0)
+		else if (spot1Max < spot2Max)
 			return false;
 
-		int availableStaffToLeadDifference{ spot1.getAvailableStaffToLead() - spot2.getAvailableStaffToLead() }; //break ties further by most available staff to lead
-		if (availableStaffToLeadDifference > 0)
-			return true;
-		else if (availableStaffToLeadDifference < 0)
-			return false;
-
-		else if (spot1.getSpotsLeftToFill() < spot2.getSpotsLeftToFill()) //break remaining ties by least spots left to fill
+		//break remaining ties by least spots left to fill
+		else if (spot1.getSpotsLeftToFill() < spot2.getSpotsLeftToFill())
 			return true;
 		else
 			return false;
 	}
 
-	friend bool operator< (ActivityAndScheduleSlotWrapper& spot1, ActivityAndScheduleSlotWrapper& spot2)
+	friend bool operator< (SpotWrapper& spot1, SpotWrapper& spot2)
 	{
-		//sorts by smallest minimum options of places to go or staff available
-		int minAvailableDifference{ std::min(spot1.getNumberToDiscard(),spot1.getAvailableStaffToLead()) - std::min(spot2.getNumberToDiscard(),spot2.getAvailableStaffToLead()) };
-		if (minAvailableDifference < 0)
+		//gets the min and max of the pair of number to discard for each spot
+		int spot1Min{ std::get<0>(spot1.getNumberToDiscard()) };
+		int spot1Max{ std::get<1>(spot1.getNumberToDiscard()) };
+		if (spot1Min > spot1Max)
+			std::swap(spot1Min, spot1Max);
+		int spot2Min{ std::get<0>(spot2.getNumberToDiscard()) };
+		int spot2Max{ std::get<1>(spot2.getNumberToDiscard()) };
+		if (spot2Min > spot2Max)
+			std::swap(spot2Min, spot2Max);
+
+
+
+		//sorts by largest minimum options to discard
+		if (spot1Min < spot2Min)
 			return true;
-		else if (minAvailableDifference > 0)
+		else if (spot1Min > spot2Min)
 			return false;
 
-		int numberToDiscardDifference{ spot1.getNumberToDiscard() - spot2.getNumberToDiscard() }; //break ties by spots with least options of places to go
-		if (numberToDiscardDifference < 0)
+		//breaks ties by largest largest options to discard
+		if (spot1Max < spot2Max)
 			return true;
-		else if (numberToDiscardDifference > 0)
+		else if (spot1Max > spot2Max)
 			return false;
 
-		int availableStaffToLeadDifference{ spot1.getAvailableStaffToLead() - spot2.getAvailableStaffToLead() }; //break ties further by least available staff to lead
-		if (availableStaffToLeadDifference < 0)
-			return true;
-		else if (availableStaffToLeadDifference > 0)
-			return false;
-
-		else if (spot1.getSpotsLeftToFill() < spot2.getSpotsLeftToFill()) //break remaining ties by most spots left to fill
+		//break remaining ties by least spots left to fill
+		else if (spot1.getSpotsLeftToFill() > spot2.getSpotsLeftToFill())
 			return true;
 		else
 			return false;
@@ -91,7 +103,7 @@ public:
 
 
 //Represents each activity
-class Activity :public ActivityAndScheduleSlotWrapper
+class Activity :public SpotWrapper
 {
 	ActivityCategory* m_activityCategory{ nullptr }; //holds a pointer to the activity category which this activity belongs to
 
@@ -198,17 +210,24 @@ public:
 		m_activityCategory = activityCategory;
 	}
 
-	//Discarded options in activity are spots - number of spots to fill
-	constexpr int getNumberToDiscard() const
+	//gets number of Schedule Slots where this activity is available
+	constexpr int numberofAvailableScheduleSlots() const
 	{
-		return static_cast<int>(m_timesAvailable.size())-m_timesLeftPerCycle+1;
+		return static_cast<int>(m_timesAvailable.size());
 	}
 
 	//only staff listed in preferred, neutral or unpreferred are able to lead the activity
-	const int getAvailableStaffToLead() const
+	constexpr int getAvailableStaffToLead() const
 	{
 		return static_cast<int>(m_preferred.size() + m_neutral.size() + m_unpreferred.size());
 	}
+
+	//Discarded slots are spots - number of spots to fill, discarded staff can be as high as staff since they can lead the activity many times
+	constexpr std::pair<int, int> getNumberToDiscard() const 
+	{
+		return { numberofAvailableScheduleSlots() - m_timesLeftPerCycle, getAvailableStaffToLead()-1 };
+	}
+
 
 	//gets spots left to fill
 	virtual constexpr int getSpotsLeftToFill() const
@@ -315,7 +334,7 @@ public:
 
 
 //Represents each schedule time period
-class ScheduleSlot : public ActivityAndScheduleSlotWrapper
+class ScheduleSlot : public SpotWrapper
 {
 	std::vector<Activity*> m_possibleActivities{}; //a list of all activities which can possibly occur in this slot
 	std::vector <Staff*> m_availableToLead{}; //a list of staff members who are available to lead in this slot
@@ -365,16 +384,22 @@ public:
 		m_availableToLead.push_back(staff);
 	}
 
-	//Discarded options in schedule slot are possible activities to fill the slot -1
-	constexpr int getNumberToDiscard() const
-	{
-		return static_cast<int>(m_possibleActivities.size())-1;
-	}
-
 	//gets copy of number of staff available to lead at this slot's time
 	const int getAvailableStaffToLead() const
 	{
 		return static_cast<int>(m_availableToLead.size());
+	}
+
+	//gets the number of possible activities for this slot
+	constexpr int numberOfAvailableActivities() const
+	{
+		return static_cast<int> (m_possibleActivities.size());
+	}
+
+	//Discarded options in schedule slot are possible activities to fill the slot -1
+	constexpr std::pair<int,int> getNumberToDiscard() const
+	{
+		return { m_possibleActivities.size() - 1,getAvailableStaffToLead() - 1 };
 	}
 
 	//schedule's only ever require 1 spot to fill (unless they are already filled)
@@ -412,7 +437,7 @@ void Activity::removeSlot(ScheduleSlot* slot)
 }
 
 //stores staff members
-class Staff
+class Staff : public SpotWrapper
 {
 	std::string m_name{}; //staff name
 	std::vector<ScheduleSlot*> m_timesAvailableToLead{}; //holds pointers to schedule slots where this staff is available to lead (has not been booked and does not havve break or personal time)
@@ -422,19 +447,60 @@ class Staff
 	std::vector <Activity*> m_neutral{};  //holds pointers to activities that this staff feels neutral about leading
 	std::vector <Activity*> m_unpreferred{}; //holds pointers to activities that this staff would not prefer to, but can lead
 
+	//temporary dummy variable
+	int m_remainingActivitiesToLead{10}; //how many more activities this staff should lead
+	static int nextObjectID; //holds the id of the next object to be initialized
+	int m_id{}; //each object has a unique id
+
 public:
 
 	//Staff constructor, memberwise initialization of all member variables
 	Staff(const std::string_view name, std::vector<ScheduleSlot*> timesAvailable, const std::vector <Activity*> preferred, const std::vector <Activity*> neutral, const std::vector <Activity*> unpreferred)
-		: m_name{name},
+		: m_name{ name },
 		m_timesAvailableToLead{ std::move(timesAvailable) },
 		m_preferred{ preferred },
 		m_neutral{ neutral },
-		m_unpreferred{ unpreferred }
+		m_unpreferred{ unpreferred },
+		m_id{ nextObjectID }
 	{
+		++nextObjectID; //iterates object ID to ensure each object has a unique ID
+
 		//adds this staff to avaialble the available to lead list of every slot it is available to lead in
 		for (const auto& slot : m_timesAvailableToLead)
 			slot->addAvailableToLead(this);
+	}
+
+	//gets number of available activities for this staff to lead
+	constexpr int numberOfAvailableActivities() const
+	{
+		return static_cast<int> (m_preferred.size() + m_neutral.size() + m_unpreferred.size());
+	}
+
+	//gets number of available times for this staff to lead
+	constexpr int numberofAvailableScheduleSlots() const
+	{
+		return static_cast<int>(m_timesAvailableToLead.size());
+	}
+
+	//gets number of options to be discarded before filling the spot
+	constexpr std::pair<int,int> getNumberToDiscard() const
+	{
+		return { numberOfAvailableActivities()-m_remainingActivitiesToLead,numberofAvailableScheduleSlots()-m_remainingActivitiesToLead};
+	}
+	
+	constexpr int getSpotsLeftToFill() //spots left to fill
+	{
+		return m_remainingActivitiesToLead;
+	}
+
+	constexpr std::string getType() //object type
+	{
+		return "staff";
+	}
+
+	virtual constexpr int getID() //object's unique id
+	{
+		return m_id;
 	}
 };
 
@@ -449,12 +515,12 @@ class FillSpot
 		decreased
 	};
 
-	std::vector < ActivityAndScheduleSlotWrapper*> m_spotsToBeFilled; //Holds all the activities and schedule slots to be filled
+	std::vector < SpotWrapper*> m_spotsToBeFilled; //Holds all the activities and schedule slots to be filled
 	std::vector <Activity> m_activities; //Holds activities and ensures tehir existence for the lifetime of the class
 	std::vector <ScheduleSlot> m_scheduleSlots; //Holds schedule slots and ensures tehir existence for the lifetime of the class
 
 	//moves the given spot within the spots to filled list (this allows the list to be efficiently resorted after a spot is added)
-	void updateSort(ActivityAndScheduleSlotWrapper* spot, sortDirection direction)
+	void updateSort(SpotWrapper* spot, sortDirection direction)
 	{
 		std::size_t currentIndex{ 0 };
 		for (; currentIndex < m_spotsToBeFilled.size(); ++currentIndex) //gets the index of the given spot in the spotsToBeFileld array
@@ -541,10 +607,7 @@ class FillSpot
 		}
 	}
 
-	void addActivity(Activity* activity)
-	{
 
-	}
 
 public:
 
@@ -573,10 +636,8 @@ public:
 		if (m_spotsToBeFilled.size() == 0) //if there are no more spots to fill return false
 			return false;
 
-		if (m_spotsToBeFilled[0]->getType() == "ScheduleSlot") //checks what type of pointer is in the first spot and fills in based on the type of object
-			addScheduleSlot(static_cast<ScheduleSlot*>(m_spotsToBeFilled[0]));
-		else
-			addActivity(static_cast<Activity*>(m_spotsToBeFilled[0]));
+		addScheduleSlot(static_cast<ScheduleSlot*>(m_spotsToBeFilled[0]));
+
 
 		return true; //return true if there are still spots to be filled (including the one just filled)
 	}
