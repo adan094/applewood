@@ -342,11 +342,19 @@ class ScheduleSlot : public SpotWrapper
 	Activity* m_activity{ nullptr }; //the activity which occurs in this slot
 	ActivityCategory* m_activityCategory{ nullptr }; //the activity catepgry which occurs in this slot
 	int m_id; //the unique id of this schedule slot
+	const int m_time{0}; //the time which this schedule slot takes place at
 
 public:
 	static int id; //holds id of next schedule slot
 
 	//intializes schedule slot, assigns id and iterates next id
+	ScheduleSlot(int time)
+		:m_id{ id },
+		m_time{time}
+	{
+		++id;
+	}
+
 	ScheduleSlot()
 		:m_id{ id }
 	{
@@ -427,6 +435,12 @@ public:
 
 	}
 
+	//returns the time which this schedule slot occurs at
+	constexpr int getTime() const
+	{
+		return m_time;
+	}
+
 };
 
 //defined here since it uses schedule slot which needs to eb defined before it can be used
@@ -435,6 +449,7 @@ void Activity::removeSlot(ScheduleSlot* slot)
 {
 	m_timesAvailable.erase(m_timesAvailable.begin() + slot->getID());
 }
+
 
 //stores staff members
 class Staff : public SpotWrapper
@@ -488,7 +503,7 @@ public:
 		return { numberOfAvailableActivities()-m_remainingActivitiesToLead,numberofAvailableScheduleSlots()-m_remainingActivitiesToLead};
 	}
 	
-	constexpr int getSpotsLeftToFill() //spots left to fill
+	constexpr int getSpotsLeftToFill() const //spots left to fill
 	{
 		return m_remainingActivitiesToLead;
 	}
@@ -498,12 +513,15 @@ public:
 		return "staff";
 	}
 
-	virtual constexpr int getID() //object's unique id
+	constexpr int getID() const //object's unique id
 	{
 		return m_id;
 	}
+
 };
 
+//initialize nextObjectID to 0 so that first object of staff is generated with ID of 0
+int Staff::nextObjectID{ 0 };
 
 class FillSpot
 {
