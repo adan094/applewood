@@ -557,47 +557,6 @@ class FillSpot
 	std::vector <Activity> m_activities; //Holds activities and ensures tehir existence for the lifetime of the class
 	std::vector <ScheduleSlot> m_scheduleSlots; //Holds schedule slots and ensures tehir existence for the lifetime of the class
 
-	//moves the given spot within the spots to filled list (this allows the list to be efficiently resorted after a spot is added)
-	void updateSort(SpotWrapper* spot, sortDirection direction)
-	{
-		std::size_t currentIndex{ 0 };
-		for (; currentIndex < m_spotsToBeFilled.size(); ++currentIndex) //gets the index of the given spot in the spotsToBeFileld array
-		{
-			if (spot->getType() == m_spotsToBeFilled[currentIndex]->getType() && spot->getID() == m_spotsToBeFilled[currentIndex]->getID())
-				break;
-		}
-		if (currentIndex == m_spotsToBeFilled.size()) //if the spot is not found there must be a logic error since all spots should be in the list
-			throw "spot not found in list, logic error";
-		if (direction == either) //if the direction is either, set it to decreased if the element in from of it is less than it otherwise it can be checked using increased
-		{
-			if (currentIndex > 0)
-			{
-				if (m_spotsToBeFilled[currentIndex] < m_spotsToBeFilled[currentIndex - 1])
-					direction = decreased;
-			}
-		}
-		if (direction == decreased) //if the value has decreased move it in front of values which it is not less than (should skip in the queue)
-		{
-			while (currentIndex > 0)
-			{
-				if (m_spotsToBeFilled[currentIndex] < m_spotsToBeFilled[currentIndex - 1])
-					std::swap(m_spotsToBeFilled[currentIndex], m_spotsToBeFilled[currentIndex - 1]);
-				else
-					break;
-			}
-		}
-		else //if the value has increased move it in behind values which it is greater than (should fall behind in the queue)
-		{
-			while (currentIndex < m_spotsToBeFilled.size()-1)
-			{
-				if (m_spotsToBeFilled[currentIndex] > m_spotsToBeFilled[currentIndex + 1])
-					std::swap(m_spotsToBeFilled[currentIndex], m_spotsToBeFilled[currentIndex + 1]);
-				else
-					break;
-			}
-		}
-	}
-
 	//adds an activity to the slot, updates activities that could have gone in the spot (and the one that did) and resorts spots to be filled
 	void addScheduleSlot(ScheduleSlot* slot)
 	{
