@@ -107,6 +107,16 @@ public:
   return m_availableSpots;
  }
 
+ constexpr int getIndex () const
+ {
+  return m_index;
+ }
+
+ void setIndex (int index)
+ {
+  m_index = index;
+ }
+
  
 };
 
@@ -654,6 +664,9 @@ public:
 
 		std::sort(m_spotsToBeFilled.begin(), m_spotsToBeFilled.end()); //sorts by how soon the slot should be filled
 
+  for (std::size_t index{0}; index<m_spotsToBeFilled.size(); ++index)
+   m_spotsToBeFilled[index]->setIndex(index);
+
 	}
 
 	bool fillNextSpot() 
@@ -671,6 +684,8 @@ public:
 
   std::sort(m_spotsToBeFilled.begin(), m_spotsToBeFilled.end());
 
+  for (std::size_t index{0}; index<m_spotsToBeFilled.size(); ++index)
+   m_spotsToBeFilled[index]->setIndex(index);
 
 		return true; //return true if there are still spots to be filled (including the one just filled)
 	}
