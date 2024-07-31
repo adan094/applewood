@@ -23,6 +23,7 @@ class ScheduleSlot; //Schedule Slot class prototype so it can be referred to in 
 
 class SpotWrapper
 {
+
 public:
 
 	//made int to prevent underflow errors in its children classes
@@ -30,6 +31,7 @@ public:
 	virtual constexpr int getSpotsLeftToFill() const = 0; //spots left to fill
 	virtual constexpr std::string getType() = 0; //object type
 	virtual constexpr int getID() const = 0; //object's unique id
+ int m_index{};
 
 	//the spots with the least variation of options of places to go should be filled first, ties should be solved by least available staff to lead, then most spots left to fill
 	//spots are valued based upon on soon they should be filled (soonest = lowest)
@@ -99,16 +101,23 @@ public:
 			return false;
 	}
 
+ friend foundIndex(SpotWrapper* spot, int index)
+ {
+  if(std::find(spot->m_availableSpots.begin(), spot->availableSpots.end(),[index](Spot * availableSpot){
+    if(availableSpot->m_index==index)
+     return true;
+    return false;
+   }) ==spot->m_availableSpots.end())
+   return false;
+  return true;
+ }
+
 	friend void getFirst(SpotWrapper* spot)
  {
   std::size_t index {0};
   try
   {
-		 while(std::find(spot->m_availableSpots.begin(), spot->availableSpots.end(),[index](Spot * availableSpot){
-    if(availableSpot->getIndex==index)
-     return true;
-    return false;
-   } ==spot->m_availableSpots.end())
+		 while(!foundIndex(spot,index))
     ++index;
   }
   catch(...)
@@ -123,20 +132,12 @@ public:
   std::size_t index {0};
   try
   {
-		 while(std::find(spot1->m_availableSpots.begin(), spot1->availableSpots.end(),[index](Spot * availableSpot){
-    if(availableSpot->getIndex==index)
-     return true;
-    return false;
-   } ==spot1->m_availableSpots.end()|| std::find(spot2->m_availableSpots.begin(),spot2->availableSpots.end(),[index](Spot * availableSpot){
-    if(availableSpot->getIndex==index)
-     return true;
-    return false;
-   } ==spot2->m_availableSpots.end())
+   while(!foundIndex(spot1,index)||!foundIndex(spot2,index))
     ++index;
   }
   catch(...)
   {
-   throw "Nothing can fill these spot";
+   throw "Nothing can fill these spots";
   }
  }
 };
