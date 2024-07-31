@@ -38,8 +38,8 @@ public:
 	virtual constexpr int getSpotsLeftToFill() const = 0; //spots left to fill
 	virtual constexpr Type getType() = 0; //object type
 	virtual constexpr int getID() const = 0; //object's unique id
- virtual std::vector<slotWrapper*> m_availableSpots = 0;
- int m_index{};
+  virtual std::vector<SpotWrapper*> m_availableSpots{};
+  int m_index{};
 
 	//the spots with the least variation of options of places to go should be filled first, ties should be solved by least available staff to lead, then most spots left to fill
 	//spots are valued based upon on soon they should be filled (soonest = lowest)
@@ -124,6 +124,10 @@ public:
   m_index = index;
  }
 
+ SpotWrapper* getAvailableSpots()
+ {
+  return m_availableSpots;
+ }
  
 };
 
@@ -161,7 +165,19 @@ public:
 		m_timesPerCycle{ timesPerCycle },
 		m_timesLeftPerCycle{ timesPerCycle },
 		m_activityID{ activityID }
-	{}
+	{
+   for(auto slot: m_timesAvailable)
+    m_availableSpots.push_back(slot);
+   
+   for(auto pref: m_preferred)
+    m_availableSpots.push_back(pref);
+
+   for(auto neut: m_neutral)
+    m_availableSpots.push_back(neut);
+
+   for(auto unpref: m_unpreferred)
+    m_availableSpots.push_back(unpref);
+  }
 
 	//long term should likely be removed
 	void setOffset(std::vector <int>& timeSlots)
@@ -374,18 +390,23 @@ class ScheduleSlot : public SpotWrapper
 public:
 	static int id; //holds id of next schedule slot
 
-	//intializes schedule slot, assigns id and iterates next id
-	ScheduleSlot(int time)
-		:m_id{ id },
-		m_time{time}
-	{
-		++id;
-	}
-
 	ScheduleSlot()
 		:m_id{ id }
 	{
-		++id;
+   ++id;
+
+   for(auto activity: m_possieActivities)
+    m_availableSpots.push_back(activity);
+
+   for(auto slot: m_availableToLead)
+    m_availableSpots.push_back(slot);
+	}
+
+  //intializes schedule slot, assigns id and iterates next id
+	ScheduleSlot(int time)
+		m_time{time}
+	{
+   ScheduleSlot();
 	}
 
 	//adds activity category to the slot
@@ -510,6 +531,18 @@ public:
 		//adds this staff to avaialble the available to lead list of every slot it is available to lead in
 		for (const auto& slot : m_timesAvailableToLead)
 			slot->addAvailableToLead(this);
+
+   for(auto slot: m_availableToLead)
+    m_availableSpots.push_back(slot);
+
+   for(auto pref: m_preferred)
+    m_availableSpots.push_back(pref);
+
+   for(auto neut: m_neutral)
+    m_availableSpots.push_back(neut);
+
+   for(auto unpref: m_unpreferred)
+    m_availableSpots.push_back(unpref);
 	}
 
 	//gets number of available activities for this staff to lead
