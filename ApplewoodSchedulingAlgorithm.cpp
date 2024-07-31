@@ -31,6 +31,7 @@ public:
 	virtual constexpr int getSpotsLeftToFill() const = 0; //spots left to fill
 	virtual constexpr std::string getType() = 0; //object type
 	virtual constexpr int getID() const = 0; //object's unique id
+ virtual std::vector<slotWrapper*> m_availableSpots = 0;
  int m_index{};
 
 	//the spots with the least variation of options of places to go should be filled first, ties should be solved by least available staff to lead, then most spots left to fill
@@ -101,45 +102,12 @@ public:
 			return false;
 	}
 
- friend foundIndex(SpotWrapper* spot, int index)
+ std::vector<SpotWrapper*>& getAvailableSpots()
  {
-  if(std::find(spot->m_availableSpots.begin(), spot->availableSpots.end(),[index](Spot * availableSpot){
-    if(availableSpot->m_index==index)
-     return true;
-    return false;
-   }) ==spot->m_availableSpots.end())
-   return false;
-  return true;
- }
-
-	friend void getFirst(SpotWrapper* spot)
- {
-  std::size_t index {0};
-  try
-  {
-		 while(!foundIndex(spot,index))
-    ++index;
-  }
-  catch(...)
-  {
-   throw "Nothing can fill this spot";
-  }
+  return m_availableSpots;
  }
 
  
-	friend void getFirst(SpotWrapper* spot1, SpotWrapper* spot2)
- {
-  std::size_t index {0};
-  try
-  {
-   while(!foundIndex(spot1,index)||!foundIndex(spot2,index))
-    ++index;
-  }
-  catch(...)
-  {
-   throw "Nothing can fill these spots";
-  }
- }
 };
 
 
@@ -627,6 +595,43 @@ class FillSpot
 		
 	}
 
+foundIndex(SpotWrapper* spot, int index)
+ {
+  if(std::find(spot->getAvailableSpots().begin(), spot->getAvailableSpots().end(), m_spotsToBeFilled[index]) ==spot->getAvailableSpots.end())
+   return false;
+  return true;
+ }
+
+	spot* getFirst(SpotWrapper* spot)
+ {
+  std::size_t index {0};
+  try
+  {
+		 while(foundIndex(spot,index))
+    ++index;
+  }
+  catch(...)
+  {
+   throw "Nothing can fill this spot";
+  }
+  return m_spotsToBeFilled[index];
+ }
+
+ 
+	void getFirst(SpotWrapper* spot1, SpotWrapper* spot2)
+ {
+  std::size_t index {0};
+  try
+  {
+   while(!foundIndex(spot1,index)||!foundIndex(spot2,index))
+    ++index;
+  }
+  catch(...)
+  {
+   throw "Nothing can fill these spots";
+  }
+  return m_spotsToBeFilled[index];
+ }
 
 
 public:
