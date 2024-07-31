@@ -98,6 +98,47 @@ public:
 		else
 			return false;
 	}
+
+	friend void getFirst(SpotWrapper* spot)
+ {
+  std::size_t index {0};
+  try
+  {
+		 while(std::find(spot->m_availableSpots.begin(), spot->availableSpots.end(),[index](Spot * availableSpot){
+    if(availableSpot->getIndex==index)
+     return true;
+    return false;
+   } ==spot->m_availableSpots.end())
+    ++index;
+  }
+  catch(...)
+  {
+   throw "Nothing can fill this spot";
+  }
+ }
+
+ 
+	friend void getFirst(SpotWrapper* spot1, SpotWrapper* spot2)
+ {
+  std::size_t index {0};
+  try
+  {
+		 while(std::find(spot1->m_availableSpots.begin(), spot1->availableSpots.end(),[index](Spot * availableSpot){
+    if(availableSpot->getIndex==index)
+     return true;
+    return false;
+   } ==spot1->m_availableSpots.end()|| std::find(spot2->m_availableSpots.begin(),spot2->availableSpots.end(),[index](Spot * availableSpot){
+    if(availableSpot->getIndex==index)
+     return true;
+    return false;
+   } ==spot2->m_availableSpots.end())
+    ++index;
+  }
+  catch(...)
+  {
+   throw "Nothing can fill these spot";
+  }
+ }
 };
 
 
@@ -582,47 +623,7 @@ class FillSpot
 	void addScheduleSlot(ScheduleSlot* slot)
 	{
 
-		std::vector <Activity*>* activities{ slot->getPossibleActivities() }; //gets a pointer to the list of possible activities for this slot
-
-		if (activities->size() == 0) //ensure there is at least one activity
-			throw "ERROR: NO ACTIVITIES CAN GO IN SCHEDULE SLOT" + slot->getID();
-
-		//add a random activity from the possible list to the slot
-		std::uniform_int_distribution randActivity{ 0,static_cast<int>(activities->size() - 1) };
-		int chosenActivityIndex{randActivity(mt)};
-		slot->addActivity(chosenActivityIndex);
-
-		//adds activity to chosen slot, removes slot from list of all other avialable activities at slot
-		for (std::size_t loopIndex{ 0 }; loopIndex < activities->size(); ++loopIndex)
-		{
-			if (chosenActivityIndex == loopIndex) //if chosen activity
-				(*activities)[chosenActivityIndex]->addSlot(slot); //adds slot to activity
-			else
-				(*activities)[chosenActivityIndex]->removeSlot(slot); //removes slot from available list
-		}
-
-		//loops through the list and resorts all subsection with the same activities to discard (since they all decrease by one they remain relatively unchanged)
-		int beginIndex{ 0 };
-		for (std::size_t index{ 1 }; index < activities->size(); ++index)
-		{
-			if ((*activities)[beginIndex]->getNumberToDiscard() < (*activities)[index]->getNumberToDiscard())
-			{
-				std::sort(activities->begin() + beginIndex, activities->begin() + index - 1); //sorts subsection
-				beginIndex = index; //assigns beginning of next subsection
-			}
-		}
-		std::sort(activities->begin() + beginIndex, activities->end()); //sorts final subsection
-
-		//since all activites are sorted, and they all decreased in value, they can decrease their positions until they hit the right spot if they are sorted in ascending order (except the chosen activity)
-		//resorts all activities in spots to be filled that have been updated in this function
-		for (auto* activity : *activities)
-		{
-			//the chosen activity's position an increase or decrease, all others can only decrease relative to unchanged spots.
-			if(activity->getType()==slot->getType() && activity->getID() == slot->getID())
-				updateSort(activity, either);
-			else
-				updateSort(activity, decreased);
-		}
+		
 	}
 
 
@@ -654,7 +655,15 @@ public:
 		if (m_spotsToBeFilled.size() == 0) //if there are no more spots to fill return false
 			return false;
 
-		addScheduleSlot(static_cast<ScheduleSlot*>(m_spotsToBeFilled[0]));
+		SpotsToBeFilled *item1 {m_spotsToBeFilled[0]};
+  SpotsToBeFilled *item2 {getFirst(item1)};
+		SpotsToBeFilled *item3 {getFirst(item1,item2)};
+  
+  item1->add(item2, item3);
+  item2->add(item1, item3);
+  item3->add(item1, item2);
+
+  std::sort(m_spotsToBeFilled.begin(), m_spotsToBeFilled.end());
 
 
 		return true; //return true if there are still spots to be filled (including the one just filled)
