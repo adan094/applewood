@@ -26,10 +26,17 @@ class SpotWrapper
 
 public:
 
+ enum Type
+ {
+  Activity,
+  ScheduleSlot,
+  Staff,
+ };
+
 	//made int to prevent underflow errors in its children classes
 	virtual constexpr std::pair<int,int> getNumberToDiscard() const = 0; //gets number of options to be discarded before filling the spot
 	virtual constexpr int getSpotsLeftToFill() const = 0; //spots left to fill
-	virtual constexpr std::string getType() = 0; //object type
+	virtual constexpr Type getType() = 0; //object type
 	virtual constexpr int getID() const = 0; //object's unique id
  virtual std::vector<slotWrapper*> m_availableSpots = 0;
  int m_index{};
@@ -256,9 +263,9 @@ public:
 	}
 
 	//Returns the type (for parent container type checking)
-	constexpr std::string getType()
+	constexpr Type getType()
 	{
-		return "Activity";
+		return Activity;
 	}
 
 	//adds this activity to a given schedule slot
@@ -440,9 +447,9 @@ public:
 	}
 
 	//Returns the type (for parent container type checking)
-	constexpr std::string getType()
+	constexpr Type getType()
 	{
-		return "ScheduleSlot";
+		return ScheduleSlot;
 	}
 
 	constexpr std::vector<Activity*>* getPossibleActivities()
@@ -528,9 +535,9 @@ public:
 		return m_remainingActivitiesToLead;
 	}
 
-	constexpr std::string getType() //object type
+	constexpr Type getType() //object type
 	{
-		return "staff";
+		return Staff;
 	}
 
 	constexpr int getID() const //object's unique id
