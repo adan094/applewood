@@ -208,26 +208,60 @@ void setSlots (std::vector<Scheduleslot*> preferred)
 		return static_cast<int>(m_timesAvailable.size());
 	}
 
+  template <typename t>
+  bool removeSpot(T* spot, std::vector<T*> &array)
+  {
+   for (std::size_t index {0}; index<array.size(); ++index)
+   {
+    if(array[index]==activity)
+    {
+     array.erase(index);
+     return true;
+    }
+   }
+   return false;
+  }
+
+  void remove(SpotWrapper* spot)
+  {
+   if(spot->getType()==Activity)
+   {
+    removeSpot(static_cast<Activity*>(spot),m_possibleActivities);
+   }
+   else if(spot->getType()==ScheduleSlot)
+   {
+    removeSpot(static_cast<ScheduleSlot*>(spot),m_slotsAvailable);
+   }
+   else
+   {
+    if(!removeSpot(static_cast<Staff*>(spot),m_preferred))
+    {
+     if(!removeSpot(static_cast<Staff*>(spot),m_neutral))
+      removeSpot(static_cast<Staff*>(spot),m_unpreferred);
+    }
+   }
+  }
+
   void add(SpotWrapper* spot)
   {
    if(spot->getType()==Activity)
    {
     m_activities.push_back(static_cast<Activity*>(spot));
-    remove(static_cast<Activity*>(spot));
    }
    else if(spot->getType()==ScheduleSlot)
    {
     m_slots.push_back(static_cast<ScheduleSlot*>(spot));
-    remove(static_cast<ScheduleSlot*>(spot));
    }
    else
    {
     m_staff.push_back(static_cast<Staff*>(spot));
-    remove(static_cast<Staff*>(spot));
    }
    --m_timesLeftPerCycle;
    if(m_timesLeftPerCycle==0)
+   {
     m_completed=true;
+    spot.remove(this);
+   }
   }
 
  void add(SpotWrapper* spot1, SpotWrapper* spot2)
