@@ -40,6 +40,7 @@ public:
 	virtual constexpr int getID() const = 0; //object's unique id
   virtual std::vector<SpotWrapper*> m_availableSpots{};
   int m_index{};
+  virtual void add(SpotWrapper* spot1) = 0;
 
 	//the spots with the least variation of options of places to go should be filled first, ties should be solved by least available staff to lead, then most spots left to fill
 	//spots are valued based upon on soon they should be filled (soonest = lowest)
@@ -128,6 +129,12 @@ public:
  {
   return m_availableSpots;
  }
+
+ void add(SpotWrapper* spot1, SpotWrapper* spot2)
+ {
+  add(spot1);
+  add(spot2);
+ }
  
 };
 
@@ -153,6 +160,7 @@ class Activity :public SpotWrapper
 	std::vector <Staff*> m_unpreferred{}; //a list of the staff who prefer not to lead this activity
 
 	std::vector <ScheduleSlot*> m_slots{}; //a list of the slots filled by this activity
+  std::vector <Staff*> m_staff{};
 
 public:
 
@@ -284,6 +292,21 @@ public:
 		return Activity;
 	}
 
+  void add(SpotWrapper* spot)
+  {
+   if(spot->getType()==ScheduleSlot)
+   {
+    m_slots.push_back(static_cast<ScheduleSlot*>(spot));
+    remove(static_cast<ScheduleSlot*>(spot));
+   }
+   else
+   {
+    m_staff.push_back(static_cast<Staff*>(spot));
+    remove(static_cast<Staff*>(spot));
+   }
+   --m_timesLeftPerCycle;
+  }
+
 	//adds this activity to a given schedule slot
 	void addSlot(ScheduleSlot * slot)
 	{
@@ -383,6 +406,7 @@ class ScheduleSlot : public SpotWrapper
 	std::vector <Staff*> m_availableToLead{}; //a list of staff members who are available to lead in this slot
 	//Group* group{};
 	Activity* m_activity{ nullptr }; //the activity which occurs in this slot
+  Staff* m_staff{ nullptr};
 	ActivityCategory* m_activityCategory{ nullptr }; //the activity catepgry which occurs in this slot
 	int m_id; //the unique id of this schedule slot
 	const int m_time{0}; //the time which this schedule slot takes place at
@@ -489,6 +513,20 @@ public:
 		return m_time;
 	}
 
+  void add(SpotWrapper* spot)
+  {
+   if(spot->getType()==Activity)
+   {
+    m_activity=static_cast<Activity*>(spot);
+    remove(static_cast<Activity*>(spot));
+   }
+   else
+   {
+    m_staff=static_cast<Staff*>(spot);
+    remove(static_cast<Staff*>(spot));
+   }
+  }
+
 };
 
 //defined here since it uses schedule slot which needs to eb defined before it can be used
@@ -509,6 +547,9 @@ class Staff : public SpotWrapper
 	std::vector <Activity*> m_preferred{}; //holds pointers to activities that this staff would prefer to lead
 	std::vector <Activity*> m_neutral{};  //holds pointers to activities that this staff feels neutral about leading
 	std::vector <Activity*> m_unpreferred{}; //holds pointers to activities that this staff would not prefer to, but can lead
+
+  std::vector <ScheduleSlot*> m_slots{};
+  std::vector <Activity*> m_activitiesLead{};
 
 	//temporary dummy variable
 	int m_remainingActivitiesToLead{10}; //how many more activities this staff should lead
@@ -577,6 +618,21 @@ public:
 	{
 		return m_id;
 	}
+
+  void add(SpotWrapper* spot)
+  {
+   if(spot->getType()==ScheduleSlot)
+   {
+    m_slots.push_back(static_cast<ScheduleSlot*>(spot));
+    remove(static_cast<ScheduleSlot*>(spot));
+   }
+   else
+   {
+    m_activitiesLead.push_back(static_cast<Activity*>(spot));
+    remove(static_cast<Activity*>(spot));
+   }
+   --m_remainingActivitiesToLead;
+  }
 
 };
 
