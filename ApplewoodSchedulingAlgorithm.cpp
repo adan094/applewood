@@ -223,14 +223,14 @@ public:
 
 	Activity() = default; //a default constructor with no arguments
 
-	//creates Activity using its display name, list of when it can occur, how many times it should happen and unique id.
+	//creates Activity using its display name and how many times it should happen.
 	Activity(const std::string_view activityName, const int timesPerCycle)
 		: m_activityName{ activityName }
 	{
 		m_timesPerCycle = timesPerCycle;
 		m_timesLeftPerCycle = timesPerCycle;
-		m_id = id;
-		++id;
+		m_id = id; //assings object's unique id as next id to add
+		++id; //iterates Spotwrapper ID to ensure each object has a unique ID
 	}
 
 
@@ -260,21 +260,26 @@ public:
 		return Type::Activity;
 	}
 
+	//adds a preferred staff member to this activity
 	void addPreferredStaff(Staff* staff)
 	{
 		m_preferredStaff.push_back(staff);
 	}
 
+	//adds a neutral staff member to this activity
 	void addNeutralStaff(Staff* staff)
 	{
 		m_neutralStaff.push_back(staff);
 	}
 
+	//adds an unpreferred staff member to this activity
 	void addUnpreferredStaff(Staff* staff)
 	{
 		m_unpreferredStaff.push_back(staff);
 	}
 
+	//Must be a staff member since activities only reference them and slots and slots are checked by remove prior to calling this function
+	//removes a staff member from this spot
 	void removeFromThis(SpotWrapper *spot)
 	{
 		if (!removeSpot(spot, m_preferredStaff))
@@ -364,9 +369,10 @@ public:
 class ScheduleSlot : public SpotWrapper
 {
 	const int m_time{ 0 }; //the time which this schedule slot takes place at
-	std::vector <Activity*> m_possibleActivities{};
-	std::vector <Staff*> m_possibleStaff{};
+	std::vector <Activity*> m_possibleActivities{}; //A list of possible activities to occur in this slot
+	std::vector <Staff*> m_possibleStaff{}; //A list of possible staff to occur in this slot
 
+	//adds list of possible activities to this slot and adds this slot to the timeavailable of each of those activities
 	void setPossibleActivities(std::vector<Activity*> possibleActivities)
 	{
 		m_possibleActivities = std::move(possibleActivities);
@@ -382,15 +388,15 @@ public:
 
 	ScheduleSlot() = default;
 
-	//intializes schedule slot, assigns id and iterates next id
+	//intializes schedule slot using list of activites and the time the slot occurs at
 	ScheduleSlot(std::vector <Activity*>& activities,const int time)
 		:m_time {time}
 	{
 		setPossibleActivities(activities);
 		m_timesPerCycle = 1;
 		m_timesLeftPerCycle = 1;
-		m_id = id;
-		++id;
+		m_id = id; //assings object's unique id as next id to add
+		++id; //iterates Spotwrapper ID to ensure each object has a unique ID
 	}
 
 	//adds a staff to the availableToLead array
@@ -418,11 +424,13 @@ public:
 		return m_time;
 	}
 
+	//adds a given staff member to the possible staff to fill this slot
 	void addPossibleStaff(Staff* staff)
 	{
 		m_possibleStaff.push_back(staff);
 	}
 
+	//removes a spot from their respective possible list depending on their type
 	void removeFromThis(SpotWrapper* spot)
 	{
 		if (spot->getType() == Type::Activity)
@@ -439,10 +447,11 @@ class Staff : public SpotWrapper
 {
 	std::string m_name{}; //staff name
 
-	std::vector<Activity*> m_preferredActivities{};
-	std::vector<Activity*> m_neutralActivities{};
-	std::vector<Activity*> m_unpreferredActivities{};
+	std::vector<Activity*> m_preferredActivities{}; //holds the list of activities that this staff would prefer to lead
+	std::vector<Activity*> m_neutralActivities{}; //holds the list of activities that this staff feels neutral towards leading
+	std::vector<Activity*> m_unpreferredActivities{}; //holds the lsit of activities that this staff would not prefer to lead
 
+	//adds list of preferred activities to this staff member and adds this staff to the preferred staff of each of those activities
 	void setPreferredActivities(std::vector<Activity*> preferredActivities)
 	{
 		m_preferredActivities = std::move(preferredActivities);
@@ -454,6 +463,7 @@ class Staff : public SpotWrapper
 		}
 	}
 
+	//adds list of neutral activities to this staff member and adds this staff to the neutral staff of each of those activities
 	void setNeutralActivities(std::vector<Activity*> neutralActivities)
 	{
 		m_neutralActivities = std::move(neutralActivities);
@@ -465,6 +475,7 @@ class Staff : public SpotWrapper
 		}
 	}
 
+	//adds list of unpreferred activities to this staff member and adds this staff to the unpreferred staff of each of those activities
 	void setUnpreferredActivities(std::vector<Activity*> unpreferredActivities)
 	{
 		m_unpreferredActivities = std::move(unpreferredActivities);
@@ -476,6 +487,7 @@ class Staff : public SpotWrapper
 		}
 	}
 
+	//adds list of available schedule slots to this staff member and adds this staff to the avaialble staff of each of those schedule slots
 	void setTimesAvailable(std::vector<ScheduleSlot*> timesAvailable)
 	{
 		m_timesAvailable = std::move(timesAvailable);
@@ -488,7 +500,7 @@ class Staff : public SpotWrapper
 	}
 public:
 
-	//Staff constructor, memberwise initialization of all member variables
+	//Staff constructor, initializes name, available activity lists, slots available list, times per cycle and id
 	Staff(const std::string_view name, const int timesPerCycle, std::vector <Activity*> &preferredActivities, std::vector <Activity*>& neutralActivities, std::vector <Activity*>& unpreferredActivities, std::vector<ScheduleSlot*> &slots)
 		: m_name{ name }
 	{
@@ -498,8 +510,8 @@ public:
 		setTimesAvailable(slots);
 		m_timesPerCycle = timesPerCycle;
 		m_timesLeftPerCycle = timesPerCycle;
-		m_id = id;
-		++id; //iterates object ID to ensure each object has a unique ID
+		m_id = id; //assings object's unique id as next id to add
+		++id; //iterates Spotwrapper ID to ensure each object has a unique ID
 	}
 
 	//gets number of options to be discarded before filling the spot
@@ -508,11 +520,14 @@ public:
 		return { m_preferredActivities.size() + m_neutralActivities.size() + m_unpreferredActivities.size() - m_timesLeftPerCycle,m_timesAvailable.size() - m_timesLeftPerCycle};
 	}
 
-	constexpr Type getType() //object type
+	//gets object type
+	constexpr Type getType()
 	{
 		return Type::Staff;
 	}
 
+	//Must be an activity since spots only reference them and slots and slots are checked by remove prior to calling this function
+	//removes an activity from this spot
 	void removeFromThis(SpotWrapper* spot)
 	{
 		if (!removeSpot(spot, m_preferredActivities))
@@ -523,7 +538,7 @@ public:
 	}
 };
 
-int SpotWrapper::id{ 0 };
+int SpotWrapper::id{ 0 }; //initiailize the starting id of the SpotWrapper class
 
 
 
@@ -584,10 +599,11 @@ class FillSpot
 	};
 
 	std::vector < SpotWrapper*> m_spotsToBeFilled; //Holds all the activities and schedule slots to be filled
-	std::vector <Activity> m_activities; //Holds activities and ensures tehir existence for the lifetime of the class
-	std::vector <ScheduleSlot> m_scheduleSlots; //Holds schedule slots and ensures tehir existence for the lifetime of the class
-	std::vector <Staff> m_staff;
+	std::vector <Activity> m_activities; //Holds activities and ensures their existence for the lifetime of the class
+	std::vector <ScheduleSlot> m_scheduleSlots; //Holds schedule slots and ensures their existence for the lifetime of the class
+	std::vector <Staff> m_staff; //Holds staff and ensures their existence for the lifetime of the class
 
+	//returns whether the spot at the given index of the spots to be filled array is available within a given spot
 	bool foundIndex(SpotWrapper* spot, int index)
 	{
 		if (std::find(spot->getAvailableSpots().begin(), spot->getAvailableSpots().end(), m_spotsToBeFilled[index]) == spot->getAvailableSpots().end())
@@ -595,6 +611,7 @@ class FillSpot
 		return true;
 	}
 
+	//gets the spot with the lowest index belonging to a given spot
 	SpotWrapper* getFirst(SpotWrapper* spot)
 	{
 		std::size_t index{ 0 };
@@ -610,7 +627,7 @@ class FillSpot
 		return m_spotsToBeFilled[index];
 	}
 
-
+	//gets the spot with the lowest index belonging to the union of two given spots
 	SpotWrapper* getFirst(SpotWrapper* spot1, SpotWrapper* spot2)
 	{
 		std::size_t index{ 0 };
@@ -629,7 +646,7 @@ class FillSpot
 
 public:
 
-	//initializes the fillspot list of schedule slots and activities and sorts by how soon the slot should be filled
+	//initializes the fillspot list of schedule slots, activities and staff. Sorts by how soon the slot should be filled and assigns the respective index in that list to each spot
 	FillSpot(std::vector < Activity>& activities, std::vector < ScheduleSlot>& scheduleSlots, std::vector < Staff>& staff)
 		:m_activities{ std::move(activities) },//uses std::move for efficiency
 		m_scheduleSlots{ std::move(scheduleSlots) }, //uses std::move for efficiency
@@ -658,21 +675,23 @@ public:
 
 	}
 
+	//fills the next spot in the lsit and updates all spots as needed
 	bool fillNextSpot()
 	{
 		if (m_spotsToBeFilled.size() == 0) //if there are no more spots to fill return false
 			return false;
 
-		SpotWrapper* item1{ m_spotsToBeFilled[0] };
-		SpotWrapper* item2{ getFirst(item1) };
-		SpotWrapper* item3{ getFirst(item1,item2) };
+		SpotWrapper* item1{ m_spotsToBeFilled[0] }; //gets the first spot as the first spot in the spots to be filled list
+		SpotWrapper* item2{ getFirst(item1) }; //gets the second spot as the first spot's first spot
+		SpotWrapper* item3{ getFirst(item1,item2) }; //gets the thirdd spot as the first spot from the union of the first and second spot
 
-		item1->add(item2, item3);
-		item2->add(item1, item3);
-		item3->add(item1, item2);
+		item1->add(item2, item3); //adds the second and third spot to the first one and removes the first spot from the possible lists of the second and third spots if necessary
+		item2->add(item1, item3); //adds the first and third spot to the second one and removes the second spot from the possible lists of the first and third spots if necessary
+		item3->add(item1, item2); //adds the first and second spot to the third one and removes the third spot from the possible lists of the first and second spots if necessary
 
-		std::sort(m_spotsToBeFilled.begin(), m_spotsToBeFilled.end());
+		std::sort(m_spotsToBeFilled.begin(), m_spotsToBeFilled.end()); //resorts the spots to be filled
 
+		//updates the index of each spot to be filled
 		for (std::size_t index{ 0 }; index < m_spotsToBeFilled.size(); ++index)
 			m_spotsToBeFilled[index]->setIndex(index);
 
