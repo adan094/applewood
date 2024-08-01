@@ -21,12 +21,13 @@ class Staff; //staff class prototype so it can be referred to in Activity
 class ActivityCategory; //Activity Category class prototype so it can be referred to in Activity
 class ScheduleSlot; //Schedule Slot class prototype so it can be referred to in Activity
 
-
+//Wrapper which provides generic implementation for Activity, ScheduleSlot and Staff objects
 class SpotWrapper
 {
 
 public:
 
+	//stores the possible types of a SpotWrapper
 	enum class Type
 	{
 		Activity,
@@ -37,18 +38,18 @@ public:
 	//made int to prevent underflow errors in its children classes
 	virtual constexpr std::pair<int, int> getNumberToDiscard() const = 0; //gets number of options to be discarded before filling the spot
 	virtual constexpr Type getType() = 0; //object type
-	virtual void removeFromThis(SpotWrapper* spot) = 0;
-	std::vector<SpotWrapper*> m_availableSpots{};
-	int m_index{};
+	virtual void removeFromThis(SpotWrapper* spot) = 0; //remove a spot (not a ScheduleSlot) from this object
+	std::vector<SpotWrapper*> m_availableSpots{}; //stores the available spots to fill this spot
+	int m_index{}; //stores the index in Fill Spot's spotsToBeFilled
 	int m_timesPerCycle{}; //number of times this spot should occur in the generated schedule
 	int m_timesLeftPerCycle{}; //how many more of this spot should occur
 	int m_id{}; //the unique id of the spot
 	static int id; //holds id of next spot
-	bool m_completed{ false };
+	bool m_completed{ false }; //stores whether or not this object has been filled
 
+	std::vector <Activity*> m_activities{}; //a list of the activities filled by this spot
 	std::vector <ScheduleSlot*> m_slots{}; //a list of the slots filled by this spot
-	std::vector <Staff*> m_staff{};
-	std::vector <Activity*> m_activities{};
+	std::vector <Staff*> m_staff{};  //a list of the staff filled by this spot
 
 
 	std::vector <ScheduleSlot*> m_timesAvailable{}; //holds the indices of the schedule slots where this spot can occur
@@ -59,6 +60,7 @@ public:
 	friend bool operator> (SpotWrapper& spot1, SpotWrapper& spot2)
 	{
 
+		//if a spot is completed, move to the front of the list so it can be removed
 		if (spot1.getCompleted())
 			return false;
 		if (spot2.getCompleted())
@@ -98,6 +100,7 @@ public:
 	friend bool operator< (SpotWrapper& spot1, SpotWrapper& spot2)
 	{
 
+		//if a spot is completed, move to the front of the list so it can be removed
 		if (spot1.getCompleted())
 			return true;
 		if (spot2.getCompleted())
@@ -134,23 +137,25 @@ public:
 			return false;
 	}
 
-	
-
+	//gets spots that can fill this spot
 	std::vector<SpotWrapper*>& getAvailableSpots()
 	{
 		return m_availableSpots;
 	}
 
+	//gets index of this spot
 	constexpr int getIndex() const
 	{
 		return m_index;
 	}
 
+	//sets the index of this spot
 	void setIndex(int index)
 	{
 		m_index = index;
 	}
 
+	//gets the id of this spot
 	constexpr int getID() const
 	{
 		return m_id;
@@ -162,11 +167,7 @@ public:
 		return m_timesAvailable;
 	}
 
-	constexpr int numberofAvailableScheduleSlots() const
-	{
-		return static_cast<int>(m_timesAvailable.size());
-	}
-
+	//removes a given spot from a given array in this spot
 	template <typename T>
 	bool removeSpot(SpotWrapper* spot, std::vector<T*>& array)
 	{
@@ -181,18 +182,20 @@ public:
 		return false;
 	}
 
-
+	//adds two spots to this spot
 	void add(SpotWrapper* spot1, SpotWrapper* spot2)
 	{
 		add(spot1);
 		add(spot2);
 	}
 
+	//gets the completed status of this spot
 	constexpr bool getCompleted() const
 	{
 		return m_completed;
 	}
 
+	//gets how many times this spot occurs
 	constexpr int getTimesPerCycle() const
 	{
 		return m_timesPerCycle;
@@ -247,7 +250,7 @@ public:
 	//Discarded slots are spots - number of spots to fill, discarded staff can be as high as staff since they can lead the activity many times
 	constexpr std::pair<int, int> getNumberToDiscard() const
 	{
-		return { numberofAvailableScheduleSlots() - m_timesLeftPerCycle, static_cast<int>(m_preferredStaff.size()+m_neutralStaff.size()+m_unpreferredStaff.size()) - 1 };
+		return { m_timesAvailable.size() - m_timesLeftPerCycle, static_cast<int>(m_preferredStaff.size() + m_neutralStaff.size() + m_unpreferredStaff.size()) - 1};
 	}
 
 
@@ -502,7 +505,7 @@ public:
 	//gets number of options to be discarded before filling the spot
 	constexpr std::pair<int, int> getNumberToDiscard() const
 	{
-		return { m_preferredActivities.size() + m_neutralActivities.size() + m_unpreferredActivities.size() - m_timesLeftPerCycle,numberofAvailableScheduleSlots() - m_timesLeftPerCycle };
+		return { m_preferredActivities.size() + m_neutralActivities.size() + m_unpreferredActivities.size() - m_timesLeftPerCycle,m_timesAvailable.size() - m_timesLeftPerCycle};
 	}
 
 	constexpr Type getType() //object type
@@ -525,7 +528,7 @@ int SpotWrapper::id{ 0 };
 
 
 
-
+//removes this spot from the lists of a given spot
 void SpotWrapper::remove(SpotWrapper* spot)
 {
 	removeSpot(spot, m_availableSpots);
@@ -542,6 +545,7 @@ void SpotWrapper::remove(SpotWrapper* spot)
 
 }
 
+//adds a given spot to this spot and removes this spot from other spots if it has been filled
 void SpotWrapper::add(SpotWrapper* spot)
 {
 	if (spot->getType() == Type::Activity)
@@ -556,11 +560,16 @@ void SpotWrapper::add(SpotWrapper* spot)
 	{
 		m_staff.push_back(static_cast<Staff*>(spot));
 	}
-	--m_timesLeftPerCycle;
+
+	--m_timesLeftPerCycle; //decreases the times left to add to this spot
+
+	//if this spot is full, remove it from the possible list of all its possible spot
 	if (m_timesLeftPerCycle == 0)
 	{
 		m_completed = true;
-		spot->remove(this);
+		
+		for(SpotWrapper* availableSpot: m_availableSpots)
+			availableSpot->remove(this);
 	}
 }
 
