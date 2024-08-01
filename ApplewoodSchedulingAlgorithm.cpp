@@ -147,13 +147,12 @@ class Activity :public SpotWrapper
 
 	std::string m_activityName{}; //the display name of the activity
 	std::vector <std::size_t> m_timesAvailable{}; //holds the indices of the schedule slots where this activity can occur
-	std::vector <std::size_t> m_scheduleTimesAvailable{}; 
+
 	int m_timesPerCycle{}; //number of times this activity should occur in the generated schedule
 	int m_timesLeftPerCycle{}; //how many more of this activity should occur
-	int m_offset{}; //the offset of the randomly generated ranges for selecting random schedule slots
 
 	//note: it is up to the intializer to ensure that the id of the activity is unique 
-	int m_activityID{}; //the unique id of the activity 
+	int m_ID{}; //the unique id of the activity 
 
 	std::vector <Staff*> m_preferred{}; //a list of the staff who prefer to lead this activity
 	std::vector <Staff*> m_neutral{}; //a list of the staff who are neutral towards leading this activity
@@ -172,7 +171,7 @@ public:
 		m_timesAvailable{ std::move(timesAvailable) }, //times available is moved to save computing costs of copying the list
 		m_timesPerCycle{ timesPerCycle },
 		m_timesLeftPerCycle{ timesPerCycle },
-		m_activityID{ activityID }
+		m_ID{ activityID }
 	{
    for(auto slot: m_timesAvailable)
     m_availableSpots.push_back(slot);
@@ -186,38 +185,6 @@ public:
    for(auto unpref: m_unpreferred)
     m_availableSpots.push_back(unpref);
   }
-
-	//long term should likely be removed
-	void setOffset(std::vector <int>& timeSlots)
-	{
-		std::size_t timesAvailableIndex{ 0 };
-		std::size_t timeSlotsIndex{ 0 };
-		while ((timesAvailableIndex < m_timesAvailable.size()) && (timeSlotsIndex < timeSlots.size()))
-		{
-			if (m_timesAvailable[timesAvailableIndex] == timeSlots[timeSlotsIndex])
-			{
-				m_scheduleTimesAvailable.push_back(m_timesAvailable[timesAvailableIndex]);
-				++timesAvailableIndex;
-				++timeSlotsIndex;
-			}
-			else if (m_timesAvailable[timesAvailableIndex] < timeSlots[timeSlotsIndex])
-				++timesAvailableIndex;
-			else
-				++timeSlotsIndex;
-
-		}
-		int endOfRand{ 0 };
-		if (m_timesPerCycle > 0)
-			endOfRand = static_cast<int>(m_scheduleTimesAvailable.size()) % m_timesPerCycle;
-		std::uniform_int_distribution randOffset{ 0, endOfRand };
-		m_offset = randOffset(mt);
-	}
-
-	//gets a copy of the offset
-	constexpr int getOffset() const
-	{
-		return m_offset;
-	}
 
 	//gets timesAvailable array
 	std::vector <std::size_t>& getTimesAvailable()
@@ -281,7 +248,7 @@ public:
 
 
 	//gets spots left to fill
-	virtual constexpr int getSpotsLeftToFill() const
+  constexpr int getSpotsLeftToFill() const
 	{
 		return m_timesLeftPerCycle;
 	}
@@ -306,21 +273,6 @@ public:
    }
    --m_timesLeftPerCycle;
   }
-
-	//adds this activity to a given schedule slot
-	void addSlot(ScheduleSlot * slot)
-	{
-		m_slots.push_back(slot); //adds to schedule slot list
-
-		if (m_timesLeftPerCycle < 0) //make sure there are still activities left to add
-			throw "CANNOT ADD EMPTY FILLED ACTIVITY";
-
-		--m_timesLeftPerCycle; //removes 1 from times left per cycle
-		removeSlot(slot); //removes slot from available list
-	}
-
-	//removes schedule slot from list of available slots
-	void removeSlot(ScheduleSlot* slot);
 
 
 };
