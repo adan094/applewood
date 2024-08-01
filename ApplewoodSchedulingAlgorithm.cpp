@@ -42,7 +42,7 @@ public:
 	int m_timesLeftPerCycle{}; //how many more of this spot should occur
   int m_ID{}; //the unique id of the spot
   static int id; //holds id of next spot
-
+  bool m_completed {false};
 
 	std::vector <Staff*> m_preferred{}; //a list of the staff who prefer to lead this spot
 	std::vector <Staff*> m_neutral{}; //a list of the staff who are neutral towards leading this spot
@@ -60,6 +60,12 @@ public:
 	//spots are valued based upon on soon they should be filled (soonest = lowest)
 	friend bool operator> (SpotWrapper& spot1, SpotWrapper& spot2)
 	{
+
+    if (spot1.getCompleted())
+     return false;
+    if (spot2.getCompleted())
+     return true;
+
 		//gets the min and max of the pair of number to discard for each spot
 		int spot1Min{ std::get<0>(spot1.getNumberToDiscard())};
 		int spot1Max{ std::get<1>(spot1.getNumberToDiscard()) };
@@ -93,6 +99,12 @@ public:
 
 	friend bool operator< (SpotWrapper& spot1, SpotWrapper& spot2)
 	{
+
+    if (spot1.getCompleted())
+     return true;
+    if (spot2.getCompleted())
+     return false;
+
 		//gets the min and max of the pair of number to discard for each spot
 		int spot1Min{ std::get<0>(spot1.getNumberToDiscard()) };
 		int spot1Max{ std::get<1>(spot1.getNumberToDiscard()) };
@@ -179,13 +191,6 @@ void setSlots (std::vector<Scheduleslot*> preferred)
   return m_id;
  }
 
-
- void add(SpotWrapper* spot1, SpotWrapper* spot2)
- {
-  add(spot1);
-  add(spot2);
- }
-
 	//gets timesAvailable array
 	std::vector <ScheduleSlot*>& getTimesAvailable()
 	{
@@ -221,9 +226,20 @@ void setSlots (std::vector<Scheduleslot*> preferred)
     remove(static_cast<Staff*>(spot));
    }
    --m_timesLeftPerCycle;
+   if(m_timesLeftPerCycle==0)
+    m_completed=true;
   }
 
+ void add(SpotWrapper* spot1, SpotWrapper* spot2)
+ {
+  add(spot1);
+  add(spot2);
+ }
 
+ constexpr bool getCompleted() const
+ {
+  return m_completed;
+ }
 
 };
 
