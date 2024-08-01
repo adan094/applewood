@@ -37,6 +37,7 @@ public:
 	//made int to prevent underflow errors in its children classes
 	virtual constexpr std::pair<int, int> getNumberToDiscard() const = 0; //gets number of options to be discarded before filling the spot
 	virtual constexpr Type getType() = 0; //object type
+	virtual void removeFromThis(SpotWrapper* spot) = 0;
 	std::vector<SpotWrapper*> m_availableSpots{};
 	int m_index{};
 	int m_timesPerCycle{}; //number of times this spot should occur in the generated schedule
@@ -45,15 +46,11 @@ public:
 	static int id; //holds id of next spot
 	bool m_completed{ false };
 
-	std::vector <Staff*> m_preferred{}; //a list of the staff who prefer to lead this spot
-	std::vector <Staff*> m_neutral{}; //a list of the staff who are neutral towards leading this spot
-	std::vector <Staff*> m_unpreferred{}; //a list of the staff who prefer not to lead this spot
-
 	std::vector <ScheduleSlot*> m_slots{}; //a list of the slots filled by this spot
 	std::vector <Staff*> m_staff{};
 	std::vector <Activity*> m_activities{};
 
-	std::vector<Activity*> m_possibleActivities{}; //a list of all activities which can possibly occur in this slot
+
 	std::vector <ScheduleSlot*> m_timesAvailable{}; //holds the indices of the schedule slots where this spot can occur
 
 
@@ -165,19 +162,13 @@ public:
 		return m_timesAvailable;
 	}
 
-	//only staff listed in preferred, neutral or unpreferred are able to lead this spot
-	constexpr int getAvailableStaffToLead() const
-	{
-		return static_cast<int>(m_preferred.size() + m_neutral.size() + m_unpreferred.size());
-	}
-
 	constexpr int numberofAvailableScheduleSlots() const
 	{
 		return static_cast<int>(m_timesAvailable.size());
 	}
 
 	template <typename T>
-	bool removeSpot(T* spot, std::vector<T*>& array)
+	bool removeSpot(SpotWrapper* spot, std::vector<T*>& array)
 	{
 		for (std::size_t index{ 0 }; index < array.size(); ++index)
 		{
@@ -207,11 +198,6 @@ public:
 		return m_timesPerCycle;
 	}
 
-	void setActivities(std::vector<Activity*> activities);
-	void setSlots(std::vector<ScheduleSlot*> preferred);
-	void setPreferred(std::vector<Staff*> preferred);
-	void setNeutral(std::vector<Staff*> neutral);
-	void setUnpreferred(std::vector<Staff*> unpreferred);
 	void remove(SpotWrapper* spot);
 	void add(SpotWrapper* spot);
 
@@ -226,6 +212,9 @@ class Activity :public SpotWrapper
 
 	std::string m_activityName{}; //the display name of the activity
 
+	std::vector <Staff*> m_preferredStaff{}; //a list of the staff who prefer to lead this spot
+	std::vector <Staff*> m_neutralStaff{}; //a list of the staff who are neutral towards leading this spot
+	std::vector <Staff*> m_unpreferredStaff{}; //a list of the staff who prefer not to lead this spot
 
 public:
 
@@ -258,7 +247,7 @@ public:
 	//Discarded slots are spots - number of spots to fill, discarded staff can be as high as staff since they can lead the activity many times
 	constexpr std::pair<int, int> getNumberToDiscard() const
 	{
-		return { numberofAvailableScheduleSlots() - m_timesLeftPerCycle, getAvailableStaffToLead() - 1 };
+		return { numberofAvailableScheduleSlots() - m_timesLeftPerCycle, static_cast<int>(m_preferredStaff.size()+m_neutralStaff.size()+m_unpreferredStaff.size()) - 1 };
 	}
 
 
@@ -268,6 +257,29 @@ public:
 		return Type::Activity;
 	}
 
+	void addPreferredStaff(Staff* staff)
+	{
+		m_preferredStaff.push_back(staff);
+	}
+
+	void addNeutralStaff(Staff* staff)
+	{
+		m_neutralStaff.push_back(staff);
+	}
+
+	void addUnpreferredStaff(Staff* staff)
+	{
+		m_unpreferredStaff.push_back(staff);
+	}
+
+	void removeFromThis(SpotWrapper *spot)
+	{
+		if (!removeSpot(spot, m_preferredStaff))
+		{
+			if (!removeSpot(spot, m_neutralStaff))
+				removeSpot(spot, m_unpreferredStaff);
+		}
+	}
 
 };
 
@@ -349,35 +361,46 @@ public:
 class ScheduleSlot : public SpotWrapper
 {
 	const int m_time{ 0 }; //the time which this schedule slot takes place at
+	std::vector <Activity*> m_possibleActivities{};
+	std::vector <Staff*> m_possibleStaff{};
+
+	void setPossibleActivities(std::vector<Activity*> possibleActivities)
+	{
+		m_possibleActivities = std::move(possibleActivities);
+		for (auto activity : m_activities)
+		{
+			m_availableSpots.push_back(activity);
+			activity->m_availableSpots.push_back(this);
+			activity->m_timesAvailable.push_back(this);
+		}
+	}
 
 public:
 
-	ScheduleSlot()
+	ScheduleSlot() = default;
+
+	//intializes schedule slot, assigns id and iterates next id
+	ScheduleSlot(std::vector <Activity*>& activities,const int time)
+		:m_time {time}
 	{
+		setPossibleActivities(activities);
 		m_timesPerCycle = 1;
 		m_timesLeftPerCycle = 1;
 		m_id = id;
 		++id;
 	}
 
-	//intializes schedule slot, assigns id and iterates next id
-	ScheduleSlot( const int time)
-		:m_time{ time }
-	{
-		ScheduleSlot();
-	}
-
 	//adds a staff to the availableToLead array
 	constexpr void addAvailableToLead(Staff* staff)
 	{
-		m_preferred.push_back(staff);
+		m_possibleStaff.push_back(staff);
 	}
 
 
 	//Discarded options in schedule slot are possible activities to fill the slot -1
 	constexpr std::pair<int, int> getNumberToDiscard() const
 	{
-		return { m_possibleActivities.size() - 1,getAvailableStaffToLead() - 1 };
+		return { m_possibleActivities.size() - 1,static_cast<int>(m_possibleStaff.size()) - 1};
 	}
 
 	//Returns the type (for parent container type checking)
@@ -392,6 +415,19 @@ public:
 		return m_time;
 	}
 
+	void addPossibleStaff(Staff* staff)
+	{
+		m_possibleStaff.push_back(staff);
+	}
+
+	void removeFromThis(SpotWrapper* spot)
+	{
+		if (spot->getType() == Type::Activity)
+			removeSpot(spot, m_possibleActivities);
+		else
+			removeSpot(spot, m_possibleStaff);
+	}
+
 };
 
 
@@ -400,12 +436,63 @@ class Staff : public SpotWrapper
 {
 	std::string m_name{}; //staff name
 
+	std::vector<Activity*> m_preferredActivities{};
+	std::vector<Activity*> m_neutralActivities{};
+	std::vector<Activity*> m_unpreferredActivities{};
+
+	void setPreferredActivities(std::vector<Activity*> preferredActivities)
+	{
+		m_preferredActivities = std::move(preferredActivities);
+		for (auto activity : m_activities)
+		{
+			m_availableSpots.push_back(activity);
+			activity->m_availableSpots.push_back(this);
+			activity->addPreferredStaff(this);
+		}
+	}
+
+	void setNeutralActivities(std::vector<Activity*> neutralActivities)
+	{
+		m_neutralActivities = std::move(neutralActivities);
+		for (auto activity : m_activities)
+		{
+			m_availableSpots.push_back(activity);
+			activity->m_availableSpots.push_back(this);
+			activity->addNeutralStaff(this);
+		}
+	}
+
+	void setUnpreferredActivities(std::vector<Activity*> unpreferredActivities)
+	{
+		m_unpreferredActivities = std::move(unpreferredActivities);
+		for (auto activity : m_activities)
+		{
+			m_availableSpots.push_back(activity);
+			activity->m_availableSpots.push_back(this);
+			activity->addUnpreferredStaff(this);
+		}
+	}
+
+	void setTimesAvailable(std::vector<ScheduleSlot*> timesAvailable)
+	{
+		m_timesAvailable = std::move(timesAvailable);
+		for (auto slot : m_timesAvailable)
+		{
+			m_availableSpots.push_back(slot);
+			slot->m_availableSpots.push_back(this);
+			slot->addPossibleStaff(this);
+		}
+	}
 public:
 
 	//Staff constructor, memberwise initialization of all member variables
-	Staff(const std::string_view name, int timesPerCycle)
+	Staff(const std::string_view name, const int timesPerCycle, std::vector <Activity*> &preferredActivities, std::vector <Activity*>& neutralActivities, std::vector <Activity*>& unpreferredActivities, std::vector<ScheduleSlot*> &slots)
 		: m_name{ name }
 	{
+		setPreferredActivities(preferredActivities);
+		setNeutralActivities(neutralActivities);
+		setUnpreferredActivities(unpreferredActivities);
+		setTimesAvailable(slots);
 		m_timesPerCycle = timesPerCycle;
 		m_timesLeftPerCycle = timesPerCycle;
 		m_id = id;
@@ -415,70 +502,44 @@ public:
 	//gets number of options to be discarded before filling the spot
 	constexpr std::pair<int, int> getNumberToDiscard() const
 	{
-		return { m_possibleActivities.size() - m_timesLeftPerCycle,numberofAvailableScheduleSlots() - m_timesLeftPerCycle };
+		return { m_preferredActivities.size() + m_neutralActivities.size() + m_unpreferredActivities.size() - m_timesLeftPerCycle,numberofAvailableScheduleSlots() - m_timesLeftPerCycle };
 	}
 
 	constexpr Type getType() //object type
 	{
 		return Type::Staff;
 	}
+
+	void removeFromThis(SpotWrapper* spot)
+	{
+		if (!removeSpot(spot, m_preferredActivities))
+		{
+			if (!removeSpot(spot, m_neutralActivities))
+				removeSpot(spot, m_unpreferredActivities);
+		}
+	}
 };
 
 int SpotWrapper::id{ 0 };
 
-void SpotWrapper::setActivities(std::vector<Activity*> activities)
-{
-	m_possibleActivities = std::move(activities);
-	for (auto activity : m_activities)
-		m_availableSpots.push_back(activity);
-}
 
-void SpotWrapper::setSlots(std::vector<ScheduleSlot*> preferred)
-{
-	m_timesAvailable = std::move(preferred);
-	for (auto slot : m_timesAvailable)
-		m_availableSpots.push_back(slot);
-}
 
-void SpotWrapper::setPreferred(std::vector<Staff*> preferred)
-{
-	m_preferred = std::move(preferred);
-	for (auto pref : m_preferred)
-		m_availableSpots.push_back(pref);
-}
 
-void SpotWrapper::setNeutral(std::vector<Staff*> neutral)
-{
-	m_neutral = std::move(neutral);
-	for (auto neut : m_neutral)
-		m_availableSpots.push_back(neut);
-}
-
-void SpotWrapper::setUnpreferred(std::vector<Staff*> unpreferred)
-{
-	m_unpreferred = std::move(unpreferred);
-	for (auto unpref : m_unpreferred)
-		m_availableSpots.push_back(unpref);
-}
 
 void SpotWrapper::remove(SpotWrapper* spot)
 {
-	if (spot->getType() == Type::Activity)
-	{
-		removeSpot(static_cast<Activity*>(spot), m_possibleActivities);
-	}
-	else if (spot->getType() == Type::ScheduleSlot)
+	removeSpot(spot, m_availableSpots);
+
+	if (spot->getType() == Type::ScheduleSlot)
 	{
 		removeSpot(static_cast<ScheduleSlot*>(spot), m_timesAvailable);
 	}
 	else
 	{
-		if (!removeSpot(static_cast<Staff*>(spot), m_preferred))
-		{
-			if (!removeSpot(static_cast<Staff*>(spot), m_neutral))
-				removeSpot(static_cast<Staff*>(spot), m_unpreferred);
-		}
+		removeFromThis(spot);
 	}
+
+
 }
 
 void SpotWrapper::add(SpotWrapper* spot)
