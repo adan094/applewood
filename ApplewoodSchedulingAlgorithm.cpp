@@ -359,8 +359,8 @@ class ScheduleSlot : public SpotWrapper
 	//Group* group{};
 	Activity* m_activity{ nullptr }; //the activity which occurs in this slot
   Staff* m_staff{ nullptr};
-	ActivityCategory* m_activityCategory{ nullptr }; //the activity catepgry which occurs in this slot
-	int m_id; //the unique id of this schedule slot
+
+  const int m_id; //the unique id of this schedule slot
 	const int m_time{0}; //the time which this schedule slot takes place at
 
 public:
@@ -385,29 +385,16 @@ public:
    ScheduleSlot();
 	}
 
-	//adds activity category to the slot
-	void addActivityCategory(ActivityCategory& cat)
-	{
-		m_activityCategory = &cat;
-		m_activity = cat.getNextActivity();
-	}
-
 	//gets a pointer to the activity in the slot
 	constexpr Activity* getActivity() const
 	{
 		return m_activity;
 	}
 
-	//gets a pointer to the activity category in the slot
-	constexpr ActivityCategory* getActivityCategory() const
-	{
-		return m_activityCategory;
-	}
-
 	//gets a copy of the id in the slot
 	constexpr int getID() const
 	{
-		return id;
+		return m_id;
 	}
 
 	//adds a staff to the availableToLead array
@@ -452,11 +439,6 @@ public:
 	constexpr std::vector<Activity*>* getPossibleActivities()
 	{
 		return &m_possibleActivities;
-	}
-
-	void addActivity(std::size_t index)
-	{
-
 	}
 
 	//returns the time which this schedule slot occurs at
