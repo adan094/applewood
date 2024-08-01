@@ -643,6 +643,23 @@ class FillSpot
 		return m_spotsToBeFilled[index];
 	}
 
+	//updates the spots to be filled list and its members indices
+	void updateSpotsToBeFilled()
+	{
+		std::sort(m_spotsToBeFilled.begin(), m_spotsToBeFilled.end()); //sorts by how soon the slot should be filled
+
+		std::size_t endOfCompleted{ 0 };
+
+		//removes already filled spots from list
+		while (m_spotsToBeFilled[endOfCompleted]->getCompleted())
+			++endOfCompleted;
+		m_spotsToBeFilled.erase(m_spotsToBeFilled.begin(), m_spotsToBeFilled.begin() + endOfCompleted);
+
+		//updates the index of each spot to be filled
+		for (std::size_t index{ endOfCompleted }; index < m_spotsToBeFilled.size(); ++index)
+			m_spotsToBeFilled[index]->setIndex(index);
+	}
+
 
 public:
 
@@ -668,10 +685,7 @@ public:
 			m_spotsToBeFilled.push_back(&staff);
 		}
 
-		std::sort(m_spotsToBeFilled.begin(), m_spotsToBeFilled.end()); //sorts by how soon the slot should be filled
-
-		for (std::size_t index{ 0 }; index < m_spotsToBeFilled.size(); ++index)
-			m_spotsToBeFilled[index]->setIndex(index);
+		updateSpotsToBeFilled(); //updates the spots to be filled list and its members indices
 
 	}
 
@@ -689,11 +703,7 @@ public:
 		item2->add(item1, item3); //adds the first and third spot to the second one and removes the second spot from the possible lists of the first and third spots if necessary
 		item3->add(item1, item2); //adds the first and second spot to the third one and removes the third spot from the possible lists of the first and second spots if necessary
 
-		std::sort(m_spotsToBeFilled.begin(), m_spotsToBeFilled.end()); //resorts the spots to be filled
-
-		//updates the index of each spot to be filled
-		for (std::size_t index{ 0 }; index < m_spotsToBeFilled.size(); ++index)
-			m_spotsToBeFilled[index]->setIndex(index);
+		updateSpotsToBeFilled(); //updates the spots to be filled list and its members indices
 
 		return true; //return true if there are still spots to be filled (including the one just filled)
 	}
