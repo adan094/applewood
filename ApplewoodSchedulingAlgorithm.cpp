@@ -54,7 +54,12 @@ public:
 
   std::vector<Activity*> m_possibleActivities{}; //a list of all activities which can possibly occur in this slot
   std::vector <ScheduleSlot*> m_timesAvailable{}; //holds the indices of the schedule slots where this spot can occur
-  virtual void add(SpotWrapper* spot1) = 0;
+
+  std::vector <int> m_slotTimes{};
+  std::vector <std::string> m_activityNames{};
+  std::vector <std::string> m_preferredNames{};
+  std::vector <std::string> m_neutralNames{};
+  std::vector <std::string> m_unpreferreeNames{};
 
 	//the spots with the least variation of options of places to go should be filled first, ties should be solved by least available staff to lead, then most spots left to fill
 	//spots are valued based upon on soon they should be filled (soonest = lowest)
@@ -292,11 +297,15 @@ public:
 	Activity() = default; //a default constructor with no arguments
 
 	//creates Activity using its display name, list of when it can occur, how many times it should happen and unique id.
-	Activity(const std::string_view activityName, const int timesPerCycle)
+	Activity(const std::string_view activityName, const int timesPerCycle, std::vector <int> &slotTimes, std::vector<std::string>& preferredNames, std::vector<std::string>& neutralNames, std::vector<std::string>& unpreferredNames)
 		: m_activityName{ activityName },
 		m_timesPerCycle{ timesPerCycle },
 		m_timesLeftPerCycle{ timesPerCycle },
-		m_id{ id }
+		m_id{ id },
+    m_slotTimes{std::move(slotTimes)},
+    m_preferredNames{std::move(preferredNames)},
+    m_neutralNames{std::move(neutralNames)},
+    m_unpreferredNames{std::move(unpreferredNames)}
 	{
    ++id;
   }
@@ -412,10 +421,15 @@ class ScheduleSlot : public SpotWrapper
 
 public:
 	
-	ScheduleSlot()
+	ScheduleSlot(std::vector <std::string> &activityNames, std::vector<std::string>& preferredNames, std::vector<std::string>& neutralNames, std::vector<std::string>& unpreferredNames)
     :m_timesPerCycle{ 1 },
 		m_timesLeftPerCycle{ 1 },
-    m_id{id}
+    m_id{id},
+    m_activityNames{std::move(activityNames)},
+    m_preferredNames{std::move(preferredNames)},
+    m_neutralNames{std::move(neutralNames)},
+    m_unpreferredNames{std::move(unpreferredNames)}
+
 	{
    ++id;
 	}
@@ -463,11 +477,13 @@ class Staff : public SpotWrapper
 public:
 
 	//Staff constructor, memberwise initialization of all member variables
-	Staff(const std::string_view name, int timesPerCycle)
+	Staff(const std::string_view name, int timesPerCycle, std::vector <std::string> &activityNames, std::vector <int> &slotTimes)
 		: m_name{ name },
     m_timesPerCycle{ timesPerCycle },
 		m_timesLeftPerCycle{ timesPerCycle },
-		m_id{ id}
+		m_id{ id},
+    m_activityNames{std::move(activityNames)},
+    m_slotTimes{std::move(slotTimes)}
 	{
 		++id; //iterates object ID to ensure each object has a unique ID
 	}
