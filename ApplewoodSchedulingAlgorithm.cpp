@@ -449,6 +449,7 @@ class FillSpot
 	std::vector < SpotWrapper*> m_spotsToBeFilled; //Holds all the activities and schedule slots to be filled
 	std::vector <Activity> m_activities; //Holds activities and ensures tehir existence for the lifetime of the class
 	std::vector <ScheduleSlot> m_scheduleSlots; //Holds schedule slots and ensures tehir existence for the lifetime of the class
+  std::vector <Staff> m_staff;
 
 foundIndex(SpotWrapper* spot, int index)
  {
@@ -494,7 +495,8 @@ public:
 	//initializes the fillspot list of schedule slots and activities and sorts by how soon the slot should be filled
 	FillSpot(std::vector < Activity>& activities, std::vector < ScheduleSlot>& scheduleSlots, std::vector < Staff>& staff)
 		:m_activities{ std::move(activities) },//uses std::move for efficiency
-		m_scheduleSlots{ std::move(scheduleSlots) } //uses std::move for efficiency
+		m_scheduleSlots{ std::move(scheduleSlots) }, //uses std::move for efficiency
+    m_staff{ std::move(staff) }
 	{
 
 		for (Activity &activity : m_activities) //adds pointers to all activities to spotsToBeFilled
@@ -505,6 +507,11 @@ public:
 		for (ScheduleSlot& scheduleSlot : m_scheduleSlots) //adds pointers to all scheduleSlots to spotsToBeFilled
 		{
 			m_spotsToBeFilled.push_back(&scheduleSlot);
+		}
+
+    for (ScheduleSlot& staff : m_staff) //adds pointers to all scheduleSlots to spotsToBeFilled
+		{
+			m_spotsToBeFilled.push_back(&staff);
 		}
 
 		std::sort(m_spotsToBeFilled.begin(), m_spotsToBeFilled.end()); //sorts by how soon the slot should be filled
