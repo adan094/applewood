@@ -16,6 +16,7 @@ std::random_device rd{};
 std::seed_seq ss{ rd(), rd(), rd(), rd(), rd(), rd(), rd(), rd() }; //generates a seed sequence using the OS's random device
 std::mt19937 mt{ ss }; //seeds merene twister using the generated seed sequence
 
+class Activity;
 class Staff; //staff class prototype so it can be referred to in Activity
 class ActivityCategory; //Activity Category class prototype so it can be referred to in Activity
 class ScheduleSlot; //Schedule Slot class prototype so it can be referred to in Activity
@@ -26,53 +27,48 @@ class SpotWrapper
 
 public:
 
- enum Type
- {
-  Activity,
-  ScheduleSlot,
-  Staff,
- };
+	enum class Type
+	{
+		Activity,
+		ScheduleSlot,
+		Staff,
+	};
 
 	//made int to prevent underflow errors in its children classes
-	virtual constexpr std::pair<int,int> getNumberToDiscard() const = 0; //gets number of options to be discarded before filling the spot
+	virtual constexpr std::pair<int, int> getNumberToDiscard() const = 0; //gets number of options to be discarded before filling the spot
 	virtual constexpr Type getType() = 0; //object type
-  std::vector<SpotWrapper*> m_availableSpots{};
-  int m_index{};
-  int m_timesPerCycle{}; //number of times this spot should occur in the generated schedule
+	std::vector<SpotWrapper*> m_availableSpots{};
+	int m_index{};
+	int m_timesPerCycle{}; //number of times this spot should occur in the generated schedule
 	int m_timesLeftPerCycle{}; //how many more of this spot should occur
-  int m_ID{}; //the unique id of the spot
-  static int id; //holds id of next spot
-  bool m_completed {false};
+	int m_id{}; //the unique id of the spot
+	static int id; //holds id of next spot
+	bool m_completed{ false };
 
 	std::vector <Staff*> m_preferred{}; //a list of the staff who prefer to lead this spot
 	std::vector <Staff*> m_neutral{}; //a list of the staff who are neutral towards leading this spot
 	std::vector <Staff*> m_unpreferred{}; //a list of the staff who prefer not to lead this spot
 
 	std::vector <ScheduleSlot*> m_slots{}; //a list of the slots filled by this spot
-  std::vector <Staff*> m_staff{};
-  std::vector <Activity*> m_activities{};
+	std::vector <Staff*> m_staff{};
+	std::vector <Activity*> m_activities{};
 
-  std::vector<Activity*> m_possibleActivities{}; //a list of all activities which can possibly occur in this slot
-  std::vector <ScheduleSlot*> m_timesAvailable{}; //holds the indices of the schedule slots where this spot can occur
+	std::vector<Activity*> m_possibleActivities{}; //a list of all activities which can possibly occur in this slot
+	std::vector <ScheduleSlot*> m_timesAvailable{}; //holds the indices of the schedule slots where this spot can occur
 
-  std::vector <int> m_slotTimes{};
-  std::vector <std::string> m_activityNames{};
-  std::vector <std::string> m_preferredNames{};
-  std::vector <std::string> m_neutralNames{};
-  std::vector <std::string> m_unpreferreeNames{};
 
 	//the spots with the least variation of options of places to go should be filled first, ties should be solved by least available staff to lead, then most spots left to fill
 	//spots are valued based upon on soon they should be filled (soonest = lowest)
 	friend bool operator> (SpotWrapper& spot1, SpotWrapper& spot2)
 	{
 
-    if (spot1.getCompleted())
-     return false;
-    if (spot2.getCompleted())
-     return true;
+		if (spot1.getCompleted())
+			return false;
+		if (spot2.getCompleted())
+			return true;
 
 		//gets the min and max of the pair of number to discard for each spot
-		int spot1Min{ std::get<0>(spot1.getNumberToDiscard())};
+		int spot1Min{ std::get<0>(spot1.getNumberToDiscard()) };
 		int spot1Max{ std::get<1>(spot1.getNumberToDiscard()) };
 		if (spot1Min > spot1Max)
 			std::swap(spot1Min, spot1Max);
@@ -105,10 +101,10 @@ public:
 	friend bool operator< (SpotWrapper& spot1, SpotWrapper& spot2)
 	{
 
-    if (spot1.getCompleted())
-     return true;
-    if (spot2.getCompleted())
-     return false;
+		if (spot1.getCompleted())
+			return true;
+		if (spot2.getCompleted())
+			return false;
 
 		//gets the min and max of the pair of number to discard for each spot
 		int spot1Min{ std::get<0>(spot1.getNumberToDiscard()) };
@@ -141,60 +137,27 @@ public:
 			return false;
 	}
 
- void setActivities (std::vector<Activity*> activities)
- {
-  m_possibleActivities=std::move(activities);
-  for(auto activity: m_activities)
-    m_availableSpots.push_back(activity);
- }
+	
 
-void setSlots (std::vector<Scheduleslot*> preferred)
- {
-  m_timesAvailable=std::move(preferred);
-  for(auto slot: m_timesAvailable)
-    m_availableSpots.push_back(slot);
- }
+	std::vector<SpotWrapper*>& getAvailableSpots()
+	{
+		return m_availableSpots;
+	}
 
- void setPreferred (std::vector<Staff*> preferred)
- {
-  m_preferred=std::move(preferred);
-  for(auto pref: m_preferred)
-    m_availableSpots.push_back(pref);
- }
+	constexpr int getIndex() const
+	{
+		return m_index;
+	}
 
- void setNeutral (std::vector<Staff*> neutral)
- {
-  m_neutral=std::move(neutral);
-  for(auto neut: m_neutral)
-    m_availableSpots.push_back(neut);
- }
+	void setIndex(int index)
+	{
+		m_index = index;
+	}
 
- void setUnpreferred (std::vector<Staff*> unpreferred)
- {
-  m_unpreferred=std::move(unpreferred);
-  for(auto unpref: m_unpreferred)
-   m_availableSpots.push_back(unpref);
- }
-
- std::vector<SpotWrapper*>& getAvailableSpots()
- {
-  return m_availableSpots;
- }
-
- constexpr int getIndex () const
- {
-  return m_index;
- }
-
- void setIndex (int index)
- {
-  m_index = index;
- }
-
- constexpr int getID () const
- {
-  return m_id;
- }
+	constexpr int getID() const
+	{
+		return m_id;
+	}
 
 	//gets timesAvailable array
 	std::vector <ScheduleSlot*>& getTimesAvailable()
@@ -208,77 +171,49 @@ void setSlots (std::vector<Scheduleslot*> preferred)
 		return static_cast<int>(m_preferred.size() + m_neutral.size() + m_unpreferred.size());
 	}
 
-  constexpr int numberofAvailableScheduleSlots() const
+	constexpr int numberofAvailableScheduleSlots() const
 	{
 		return static_cast<int>(m_timesAvailable.size());
 	}
 
-  template <typename t>
-  bool removeSpot(T* spot, std::vector<T*> &array)
-  {
-   for (std::size_t index {0}; index<array.size(); ++index)
-   {
-    if(array[index]==activity)
-    {
-     array.erase(index);
-     return true;
-    }
-   }
-   return false;
-  }
+	template <typename T>
+	bool removeSpot(T* spot, std::vector<T*>& array)
+	{
+		for (std::size_t index{ 0 }; index < array.size(); ++index)
+		{
+			if (array[index] == spot)
+			{
+				array.erase(array.begin(),array.end()+index);
+				return true;
+			}
+		}
+		return false;
+	}
 
-  void remove(SpotWrapper* spot)
-  {
-   if(spot->getType()==Activity)
-   {
-    removeSpot(static_cast<Activity*>(spot),m_possibleActivities);
-   }
-   else if(spot->getType()==ScheduleSlot)
-   {
-    removeSpot(static_cast<ScheduleSlot*>(spot),m_slotsAvailable);
-   }
-   else
-   {
-    if(!removeSpot(static_cast<Staff*>(spot),m_preferred))
-    {
-     if(!removeSpot(static_cast<Staff*>(spot),m_neutral))
-      removeSpot(static_cast<Staff*>(spot),m_unpreferred);
-    }
-   }
-  }
 
-  void add(SpotWrapper* spot)
-  {
-   if(spot->getType()==Activity)
-   {
-    m_activities.push_back(static_cast<Activity*>(spot));
-   }
-   else if(spot->getType()==ScheduleSlot)
-   {
-    m_slots.push_back(static_cast<ScheduleSlot*>(spot));
-   }
-   else
-   {
-    m_staff.push_back(static_cast<Staff*>(spot));
-   }
-   --m_timesLeftPerCycle;
-   if(m_timesLeftPerCycle==0)
-   {
-    m_completed=true;
-    spot.remove(this);
-   }
-  }
+	void add(SpotWrapper* spot1, SpotWrapper* spot2)
+	{
+		add(spot1);
+		add(spot2);
+	}
 
- void add(SpotWrapper* spot1, SpotWrapper* spot2)
- {
-  add(spot1);
-  add(spot2);
- }
+	constexpr bool getCompleted() const
+	{
+		return m_completed;
+	}
 
- constexpr bool getCompleted() const
- {
-  return m_completed;
- }
+	constexpr int getTimesPerCycle() const
+	{
+		return m_timesPerCycle;
+	}
+
+	void setActivities(std::vector<Activity*> activities);
+	void setSlots(std::vector<ScheduleSlot*> preferred);
+	void setPreferred(std::vector<Staff*> preferred);
+	void setNeutral(std::vector<Staff*> neutral);
+	void setUnpreferred(std::vector<Staff*> unpreferred);
+	void remove(SpotWrapper* spot);
+	void add(SpotWrapper* spot);
 
 };
 
@@ -290,25 +225,21 @@ class Activity :public SpotWrapper
 	ActivityCategory* m_activityCategory{ nullptr }; //holds a pointer to the activity category which this activity belongs to
 
 	std::string m_activityName{}; //the display name of the activity
-	
+
 
 public:
 
 	Activity() = default; //a default constructor with no arguments
 
 	//creates Activity using its display name, list of when it can occur, how many times it should happen and unique id.
-	Activity(const std::string_view activityName, const int timesPerCycle, std::vector <int> &slotTimes, std::vector<std::string>& preferredNames, std::vector<std::string>& neutralNames, std::vector<std::string>& unpreferredNames)
-		: m_activityName{ activityName },
-		m_timesPerCycle{ timesPerCycle },
-		m_timesLeftPerCycle{ timesPerCycle },
-		m_id{ id },
-    m_slotTimes{std::move(slotTimes)},
-    m_preferredNames{std::move(preferredNames)},
-    m_neutralNames{std::move(neutralNames)},
-    m_unpreferredNames{std::move(unpreferredNames)}
+	Activity(const std::string_view activityName, const int timesPerCycle)
+		: m_activityName{ activityName }
 	{
-   ++id;
-  }
+		m_timesPerCycle = timesPerCycle;
+		m_timesLeftPerCycle = timesPerCycle;
+		m_id = id;
+		++id;
+	}
 
 
 
@@ -325,19 +256,19 @@ public:
 	}
 
 	//Discarded slots are spots - number of spots to fill, discarded staff can be as high as staff since they can lead the activity many times
-	constexpr std::pair<int, int> getNumberToDiscard() const 
+	constexpr std::pair<int, int> getNumberToDiscard() const
 	{
-		return { numberofAvailableScheduleSlots() - m_timesLeftPerCycle, getAvailableStaffToLead()-1 };
+		return { numberofAvailableScheduleSlots() - m_timesLeftPerCycle, getAvailableStaffToLead() - 1 };
 	}
 
 
 	//Returns the type (for parent container type checking)
 	constexpr Type getType()
 	{
-		return Activity;
+		return Type::Activity;
 	}
 
-  
+
 };
 
 
@@ -363,13 +294,13 @@ public:
 		std::sort(m_activities.begin(), m_activities.end(),
 			[](Activity& a1, Activity& a2)
 			{
-				if (a1.getTotalTimesAvailable() < a2.getTotalTimesAvailable())
+				if (a1.getTimesAvailable().size() < a2.getTimesAvailable().size())
 					return true;
 				return false;
 			});
 
 
-		
+
 		for (auto& activity : m_activities)
 		{
 			m_timesPerCycle += activity.getTimesPerCycle(); //calculates how many times the category should occur as a sum of how many times its activities occur
@@ -417,39 +348,34 @@ public:
 //Represents each schedule time period
 class ScheduleSlot : public SpotWrapper
 {
-  const int m_time{0}; //the time which this schedule slot takes place at
+	const int m_time{ 0 }; //the time which this schedule slot takes place at
 
 public:
-	
-	ScheduleSlot(std::vector <std::string> &activityNames, std::vector<std::string>& preferredNames, std::vector<std::string>& neutralNames, std::vector<std::string>& unpreferredNames)
-    :m_timesPerCycle{ 1 },
-		m_timesLeftPerCycle{ 1 },
-    m_id{id},
-    m_activityNames{std::move(activityNames)},
-    m_preferredNames{std::move(preferredNames)},
-    m_neutralNames{std::move(neutralNames)},
-    m_unpreferredNames{std::move(unpreferredNames)}
 
+	ScheduleSlot()
 	{
-   ++id;
+		m_timesPerCycle = 1;
+		m_timesLeftPerCycle = 1;
+		m_id = id;
+		++id;
 	}
 
-  //intializes schedule slot, assigns id and iterates next id
-	ScheduleSlot(int time)
-		m_time{time}
+	//intializes schedule slot, assigns id and iterates next id
+	ScheduleSlot( const int time)
+		:m_time{ time }
 	{
-   ScheduleSlot();
+		ScheduleSlot();
 	}
 
 	//adds a staff to the availableToLead array
 	constexpr void addAvailableToLead(Staff* staff)
 	{
-		m_preffered.push_back(staff);
+		m_preferred.push_back(staff);
 	}
 
 
 	//Discarded options in schedule slot are possible activities to fill the slot -1
-	constexpr std::pair<int,int> getNumberToDiscard() const
+	constexpr std::pair<int, int> getNumberToDiscard() const
 	{
 		return { m_possibleActivities.size() - 1,getAvailableStaffToLead() - 1 };
 	}
@@ -457,7 +383,7 @@ public:
 	//Returns the type (for parent container type checking)
 	constexpr Type getType()
 	{
-		return ScheduleSlot;
+		return Type::ScheduleSlot;
 	}
 
 	//returns the time which this schedule slot occurs at
@@ -473,34 +399,109 @@ public:
 class Staff : public SpotWrapper
 {
 	std::string m_name{}; //staff name
-	
+
 public:
 
 	//Staff constructor, memberwise initialization of all member variables
-	Staff(const std::string_view name, int timesPerCycle, std::vector <std::string> &activityNames, std::vector <int> &slotTimes)
-		: m_name{ name },
-    m_timesPerCycle{ timesPerCycle },
-		m_timesLeftPerCycle{ timesPerCycle },
-		m_id{ id},
-    m_activityNames{std::move(activityNames)},
-    m_slotTimes{std::move(slotTimes)}
+	Staff(const std::string_view name, int timesPerCycle)
+		: m_name{ name }
 	{
+		m_timesPerCycle = timesPerCycle;
+		m_timesLeftPerCycle = timesPerCycle;
+		m_id = id;
 		++id; //iterates object ID to ensure each object has a unique ID
 	}
 
 	//gets number of options to be discarded before filling the spot
-	constexpr std::pair<int,int> getNumberToDiscard() const
+	constexpr std::pair<int, int> getNumberToDiscard() const
 	{
-		return { numberOfAvailableActivities()-m_remainingActivitiesToLead,numberofAvailableScheduleSlots()-m_remainingActivitiesToLead};
+		return { m_possibleActivities.size() - m_timesLeftPerCycle,numberofAvailableScheduleSlots() - m_timesLeftPerCycle };
 	}
 
 	constexpr Type getType() //object type
 	{
-		return Staff;
+		return Type::Staff;
 	}
 };
 
-int SpotWrapper::id { 0 };
+int SpotWrapper::id{ 0 };
+
+void SpotWrapper::setActivities(std::vector<Activity*> activities)
+{
+	m_possibleActivities = std::move(activities);
+	for (auto activity : m_activities)
+		m_availableSpots.push_back(activity);
+}
+
+void SpotWrapper::setSlots(std::vector<ScheduleSlot*> preferred)
+{
+	m_timesAvailable = std::move(preferred);
+	for (auto slot : m_timesAvailable)
+		m_availableSpots.push_back(slot);
+}
+
+void SpotWrapper::setPreferred(std::vector<Staff*> preferred)
+{
+	m_preferred = std::move(preferred);
+	for (auto pref : m_preferred)
+		m_availableSpots.push_back(pref);
+}
+
+void SpotWrapper::setNeutral(std::vector<Staff*> neutral)
+{
+	m_neutral = std::move(neutral);
+	for (auto neut : m_neutral)
+		m_availableSpots.push_back(neut);
+}
+
+void SpotWrapper::setUnpreferred(std::vector<Staff*> unpreferred)
+{
+	m_unpreferred = std::move(unpreferred);
+	for (auto unpref : m_unpreferred)
+		m_availableSpots.push_back(unpref);
+}
+
+void SpotWrapper::remove(SpotWrapper* spot)
+{
+	if (spot->getType() == Type::Activity)
+	{
+		removeSpot(static_cast<Activity*>(spot), m_possibleActivities);
+	}
+	else if (spot->getType() == Type::ScheduleSlot)
+	{
+		removeSpot(static_cast<ScheduleSlot*>(spot), m_timesAvailable);
+	}
+	else
+	{
+		if (!removeSpot(static_cast<Staff*>(spot), m_preferred))
+		{
+			if (!removeSpot(static_cast<Staff*>(spot), m_neutral))
+				removeSpot(static_cast<Staff*>(spot), m_unpreferred);
+		}
+	}
+}
+
+void SpotWrapper::add(SpotWrapper* spot)
+{
+	if (spot->getType() == Type::Activity)
+	{
+		m_activities.push_back(static_cast<Activity*>(spot));
+	}
+	else if (spot->getType() == Type::ScheduleSlot)
+	{
+		m_slots.push_back(static_cast<ScheduleSlot*>(spot));
+	}
+	else
+	{
+		m_staff.push_back(static_cast<Staff*>(spot));
+	}
+	--m_timesLeftPerCycle;
+	if (m_timesLeftPerCycle == 0)
+	{
+		m_completed = true;
+		spot->remove(this);
+	}
+}
 
 class FillSpot
 {
@@ -515,45 +516,45 @@ class FillSpot
 	std::vector < SpotWrapper*> m_spotsToBeFilled; //Holds all the activities and schedule slots to be filled
 	std::vector <Activity> m_activities; //Holds activities and ensures tehir existence for the lifetime of the class
 	std::vector <ScheduleSlot> m_scheduleSlots; //Holds schedule slots and ensures tehir existence for the lifetime of the class
-  std::vector <Staff> m_staff;
+	std::vector <Staff> m_staff;
 
-foundIndex(SpotWrapper* spot, int index)
- {
-  if(std::find(spot->getAvailableSpots().begin(), spot->getAvailableSpots().end(), m_spotsToBeFilled[index]) ==spot->getAvailableSpots.end())
-   return false;
-  return true;
- }
+	bool foundIndex(SpotWrapper* spot, int index)
+	{
+		if (std::find(spot->getAvailableSpots().begin(), spot->getAvailableSpots().end(), m_spotsToBeFilled[index]) == spot->getAvailableSpots().end())
+			return false;
+		return true;
+	}
 
-	spot* getFirst(SpotWrapper* spot)
- {
-  std::size_t index {0};
-  try
-  {
-		 while(foundIndex(spot,index))
-    ++index;
-  }
-  catch(...)
-  {
-   throw "Nothing can fill this spot";
-  }
-  return m_spotsToBeFilled[index];
- }
+	SpotWrapper* getFirst(SpotWrapper* spot)
+	{
+		std::size_t index{ 0 };
+		try
+		{
+			while (foundIndex(spot, index))
+				++index;
+		}
+		catch (...)
+		{
+			throw "Nothing can fill this spot";
+		}
+		return m_spotsToBeFilled[index];
+	}
 
- 
-	void getFirst(SpotWrapper* spot1, SpotWrapper* spot2)
- {
-  std::size_t index {0};
-  try
-  {
-   while(!foundIndex(spot1,index)||!foundIndex(spot2,index))
-    ++index;
-  }
-  catch(...)
-  {
-   throw "Nothing can fill these spots";
-  }
-  return m_spotsToBeFilled[index];
- }
+
+	SpotWrapper* getFirst(SpotWrapper* spot1, SpotWrapper* spot2)
+	{
+		std::size_t index{ 0 };
+		try
+		{
+			while (!foundIndex(spot1, index) || !foundIndex(spot2, index))
+				++index;
+		}
+		catch (...)
+		{
+			throw "Nothing can fill these spots";
+		}
+		return m_spotsToBeFilled[index];
+	}
 
 
 public:
@@ -562,10 +563,10 @@ public:
 	FillSpot(std::vector < Activity>& activities, std::vector < ScheduleSlot>& scheduleSlots, std::vector < Staff>& staff)
 		:m_activities{ std::move(activities) },//uses std::move for efficiency
 		m_scheduleSlots{ std::move(scheduleSlots) }, //uses std::move for efficiency
-    m_staff{ std::move(staff) }
+		m_staff{ std::move(staff) }
 	{
 
-		for (Activity &activity : m_activities) //adds pointers to all activities to spotsToBeFilled
+		for (Activity& activity : m_activities) //adds pointers to all activities to spotsToBeFilled
 		{
 			m_spotsToBeFilled.push_back(&activity);
 		}
@@ -575,35 +576,35 @@ public:
 			m_spotsToBeFilled.push_back(&scheduleSlot);
 		}
 
-    for (ScheduleSlot& staff : m_staff) //adds pointers to all scheduleSlots to spotsToBeFilled
+		for (Staff& staff : m_staff) //adds pointers to all scheduleSlots to spotsToBeFilled
 		{
 			m_spotsToBeFilled.push_back(&staff);
 		}
 
 		std::sort(m_spotsToBeFilled.begin(), m_spotsToBeFilled.end()); //sorts by how soon the slot should be filled
 
-  for (std::size_t index{0}; index<m_spotsToBeFilled.size(); ++index)
-   m_spotsToBeFilled[index]->setIndex(index);
+		for (std::size_t index{ 0 }; index < m_spotsToBeFilled.size(); ++index)
+			m_spotsToBeFilled[index]->setIndex(index);
 
 	}
 
-	bool fillNextSpot() 
+	bool fillNextSpot()
 	{
 		if (m_spotsToBeFilled.size() == 0) //if there are no more spots to fill return false
 			return false;
 
-		SpotsToBeFilled *item1 {m_spotsToBeFilled[0]};
-  SpotsToBeFilled *item2 {getFirst(item1)};
-		SpotsToBeFilled *item3 {getFirst(item1,item2)};
-  
-  item1->add(item2, item3);
-  item2->add(item1, item3);
-  item3->add(item1, item2);
+		SpotWrapper* item1{ m_spotsToBeFilled[0] };
+		SpotWrapper* item2{ getFirst(item1) };
+		SpotWrapper* item3{ getFirst(item1,item2) };
 
-  std::sort(m_spotsToBeFilled.begin(), m_spotsToBeFilled.end());
+		item1->add(item2, item3);
+		item2->add(item1, item3);
+		item3->add(item1, item2);
 
-  for (std::size_t index{0}; index<m_spotsToBeFilled.size(); ++index)
-   m_spotsToBeFilled[index]->setIndex(index);
+		std::sort(m_spotsToBeFilled.begin(), m_spotsToBeFilled.end());
+
+		for (std::size_t index{ 0 }; index < m_spotsToBeFilled.size(); ++index)
+			m_spotsToBeFilled[index]->setIndex(index);
 
 		return true; //return true if there are still spots to be filled (including the one just filled)
 	}
@@ -636,6 +637,8 @@ public:
 
 	static std::array<ScheduleSlot, daysInCycle* periodsInDay> scheduleSlots;
 
+	ParticipantGroup() = default;
+/*
 	ParticipantGroup(const int participants, std::vector <int>& timeSlots, const int totalTimeSlots)
 		:m_participants{ participants },
 		m_timeSlots{ std::move(timeSlots) },
@@ -826,7 +829,7 @@ public:
 
 		return;
 	}
-
+	*/
 };
 
 
@@ -899,7 +902,7 @@ int addActivity(std::string line, std::vector <Activity>& activities, const int 
 
 	int timesPerCycle{ std::stoi(line) }; //rest of line after times avaible is times per cycle
 
-	activities.push_back(Activity(activityName, timesAvailable, timesPerCycle, activityID)); //add activity to activities array
+	activities.push_back(Activity(activityName, timesPerCycle)); //add activity to activities array
 	return timesPerCycle;
 }
 
@@ -909,14 +912,14 @@ void createActivityCategory(std::vector <ActivityCategory>& categories, std::str
 {
 	std::sort(activities.begin(), activities.end(), [](Activity first, Activity second) //sorts activity list by total times available
 		{
-			return first.getTotalTimesAvailable() < second.getTotalTimesAvailable();
+			return first.getTimesAvailable().size() < second.getTimesAvailable().size();
 		});
 	categories.push_back(ActivityCategory(category, activities));
 }
 
 //takes in a lsit of activity anmes to search for and the list of activity categories and fills a list of pointers to those activities
 //note categories cannot be const since their activities are added to the activity list which may later be changed via their pointer
-void getActivities(const std::vector<std::string>& activityNames, std::vector<Activity*> &activities, std::vector <ActivityCategory>& categories)
+void getActivities(const std::vector<std::string>& activityNames, std::vector<Activity*>& activities, std::vector <ActivityCategory>& categories)
 {
 	for (std::size_t i{ 0 }; i < activityNames.size(); ++i) //loops through all activities we are searching for
 	{
@@ -924,10 +927,10 @@ void getActivities(const std::vector<std::string>& activityNames, std::vector<Ac
 		for (std::size_t j{ 0 }; j < categories.size() && loopAgain; ++j) //loops through activity categories while there are more to search and the activity has not yet been found
 		{
 			//allows us to only copy the list of activitivies int the activity category one time
-			std::vector<Activity>*  categoryActivities{ &(categories[j].getActivities()) };  //holds a pointer to the list of activities in the activity category
+			std::vector<Activity>* categoryActivities{ &(categories[j].getActivities()) };  //holds a pointer to the list of activities in the activity category
 			for (std::size_t k{ 0 }; k < categoryActivities->size() && loopAgain; ++k) //loops through activities while there are more to search and the activity has not yet been found
 			{
-				
+
 				if ((*categoryActivities)[k].getName() == activityNames[i]) //if the activity is the activity we are searching for (it has the same name as the next activity in the list of activities we are searching for)
 				{
 					activities.push_back(&(*categoryActivities)[k]); //add a pointer to the activity to the activities vector
@@ -939,7 +942,7 @@ void getActivities(const std::vector<std::string>& activityNames, std::vector<Ac
 }
 
 //initializes static array scheduleSlots before use
-std::array<ScheduleSlot, daysInCycle* periodsInDay> ParticipantGroup::scheduleSlots{};
+std::array<ScheduleSlot, daysInCycle* periodsInDay> ParticipantGroup::scheduleSlots;
 
 //takes in list of avilable times for a staff to elad at and adds a pointer to the schedule slot at each of those times to the scheduleSlotsAvailable list
 void getScheduleSlots(const std::vector<std::size_t> avail, std::vector<ScheduleSlot*> scheduleSlotsAvailable)
@@ -951,7 +954,7 @@ void getScheduleSlots(const std::vector<std::size_t> avail, std::vector<Schedule
 }
 
 //takes in a string and a breakpoint and fiils the inputted activity pointers vector with activity pointers to the activites found within the string
-void processActivitiesListFromFileToVectorofActivityPointers(std::string_view line, std::vector<Activity*> &activityPointers, std::vector <ActivityCategory>& categories, const std::size_t breakLocation)
+void processActivitiesListFromFileToVectorofActivityPointers(std::string_view line, std::vector<Activity*>& activityPointers, std::vector <ActivityCategory>& categories, const std::size_t breakLocation)
 {
 	std::string raw{ line.substr(0,breakLocation) };  //hold raw list of activities
 	std::vector<std::string> names{}; //holds list of activities names
@@ -961,7 +964,7 @@ void processActivitiesListFromFileToVectorofActivityPointers(std::string_view li
 
 //rads in staff from file and stores in the staff vector
 //note cateogries is non const due to getActivities
-void readInStaff(std::ifstream& myReader, std::vector <ActivityCategory>& categories, std::vector <Staff> &staff)
+void readInStaff(std::ifstream& myReader, std::vector <ActivityCategory>& categories, std::vector <Staff>& staff)
 {
 	std::string line{};//holds line data
 	while (std::getline(myReader, line)) //iterates for each staff in the file
@@ -1001,7 +1004,7 @@ void readInStaff(std::ifstream& myReader, std::vector <ActivityCategory>& catego
 		std::vector<ScheduleSlot*> timesAvailable{}; //holds pointers to the schedule slots corresponding to the times the staff can lead at
 		getScheduleSlots(availableTimes, timesAvailable); //fills the list of pointers using the indecies of the times that the staff can lead at 
 
-		staff.emplace_back(name, timesAvailable, preferred, neutral, unpreferred); //adds staff member to staff vector
+		//staff.emplace_back(name, timesAvailable, preferred, neutral, unpreferred); //adds staff member to staff vector
 
 	}
 }
@@ -1043,7 +1046,7 @@ int readInActivityCategories(std::vector <ActivityCategory>& categories, std::ve
 			++activityID; //iterates activity id
 		}
 		createActivityCategory(categories, prevCategory, activities); //creates final activity category
-		readInStaff(myReader, categories,staff); //reads in staff
+		readInStaff(myReader, categories, staff); //reads in staff
 	}
 	catch (const char* errorMessage) //if file could not be opened
 	{
@@ -1054,8 +1057,6 @@ int readInActivityCategories(std::vector <ActivityCategory>& categories, std::ve
 	return activityID; //retuirns the file activityid (total number of activities)
 }
 
-//std::array<ScheduleSlot, daysInCycle* periodsInDay> ParticipantGroup::scheduleSlots{};
-int ScheduleSlot::id{ 0 };
 
 int main()
 {
