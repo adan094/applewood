@@ -206,7 +206,75 @@ public:
 
 };
 
+// Represents each schedule time period
+class ScheduleSlot : public SpotWrapper
+{
+	const int m_time{ 0 }; //the time which this schedule slot takes place at
+	std::vector <Activity*> m_possibleActivities{}; //A list of possible activities to occur in this slot
+	std::vector <Staff*> m_possibleStaff{}; //A list of possible staff to occur in this slot
 
+
+public:
+
+	ScheduleSlot() = default;
+
+	//intializes schedule slot using the time the slot occurs at
+	ScheduleSlot(const int time)
+		:m_time{ time }
+	{
+		m_timesPerCycle = 1;
+		m_timesLeftPerCycle = 1;
+		m_id = id; //assings object's unique id as next id to add
+		++id; //iterates Spotwrapper ID to ensure each object has a unique ID
+	}
+
+	//adds a staff to the availableToLead array
+	constexpr void addAvailableToLead(Staff* staff)
+	{
+		m_possibleStaff.push_back(staff);
+	}
+
+
+	//Discarded options in schedule slot are possible activities to fill the slot -1
+	constexpr std::pair<int, int> getNumberToDiscard() const
+	{
+		return { m_possibleActivities.size() - 1,static_cast<int>(m_possibleStaff.size()) - 1 };
+	}
+
+	//Returns the type (for parent container type checking)
+	constexpr Type getType()
+	{
+		return Type::ScheduleSlot;
+	}
+
+	//returns the time which this schedule slot occurs at
+	constexpr int getTime() const
+	{
+		return m_time;
+	}
+
+	//adds a given staff member to the possible staff to fill this slot
+	void addPossibleStaff(Staff* staff)
+	{
+		m_possibleStaff.push_back(staff);
+	}
+
+	//adds a given activity to the possible activities to fill this slot
+	void addPossibleActivities(Activity* activity)
+	{
+		m_possibleActivities.push_back(activity);
+	}
+
+	//removes a spot from their respective possible list depending on their type
+	void removeFromThis(SpotWrapper* spot)
+	{
+		if (spot->getType() == Type::Activity)
+			removeSpot(spot, m_possibleActivities);
+		else
+			removeSpot(spot, m_possibleStaff);
+	}
+
+};
 
 //Represents each activity
 class Activity :public SpotWrapper
@@ -219,14 +287,27 @@ class Activity :public SpotWrapper
 	std::vector <Staff*> m_neutralStaff{}; //a list of the staff who are neutral towards leading this spot
 	std::vector <Staff*> m_unpreferredStaff{}; //a list of the staff who prefer not to lead this spot
 
+	//adds list of possible activities to this slot and adds this slot to the timeavailable of each of those activities
+	void setTimesAvailable(std::vector<ScheduleSlot*> &possibleSlots)
+	{
+		m_timesAvailable = std::move(possibleSlots);
+		for (auto slot : m_timesAvailable)
+		{
+			m_availableSpots.push_back(slot);
+			slot->m_availableSpots.push_back(this);
+			slot->addPossibleActivities(this);
+		}
+	}
+
 public:
 
 	Activity() = default; //a default constructor with no arguments
 
-	//creates Activity using its display name and how many times it should happen.
-	Activity(const std::string_view activityName, const int timesPerCycle)
+	//creates Activity using its display name, how many times and when it should happen.
+	Activity(const std::string_view activityName, const int timesPerCycle, std::vector<ScheduleSlot*> &possibleTimes)
 		: m_activityName{ activityName }
 	{
+		setTimesAvailable(possibleTimes);
 		m_timesPerCycle = timesPerCycle;
 		m_timesLeftPerCycle = timesPerCycle;
 		m_id = id; //assings object's unique id as next id to add
@@ -361,83 +442,6 @@ public:
 	}
 
 
-
-};
-
-
-//Represents each schedule time period
-class ScheduleSlot : public SpotWrapper
-{
-	const int m_time{ 0 }; //the time which this schedule slot takes place at
-	std::vector <Activity*> m_possibleActivities{}; //A list of possible activities to occur in this slot
-	std::vector <Staff*> m_possibleStaff{}; //A list of possible staff to occur in this slot
-
-	//adds list of possible activities to this slot and adds this slot to the timeavailable of each of those activities
-	void setPossibleActivities(std::vector<Activity*> possibleActivities)
-	{
-		m_possibleActivities = std::move(possibleActivities);
-		for (auto activity : m_activities)
-		{
-			m_availableSpots.push_back(activity);
-			activity->m_availableSpots.push_back(this);
-			activity->m_timesAvailable.push_back(this);
-		}
-	}
-
-public:
-
-	ScheduleSlot() = default;
-
-	//intializes schedule slot using list of activites and the time the slot occurs at
-	ScheduleSlot(std::vector <Activity*>& activities,const int time)
-		:m_time {time}
-	{
-		setPossibleActivities(activities);
-		m_timesPerCycle = 1;
-		m_timesLeftPerCycle = 1;
-		m_id = id; //assings object's unique id as next id to add
-		++id; //iterates Spotwrapper ID to ensure each object has a unique ID
-	}
-
-	//adds a staff to the availableToLead array
-	constexpr void addAvailableToLead(Staff* staff)
-	{
-		m_possibleStaff.push_back(staff);
-	}
-
-
-	//Discarded options in schedule slot are possible activities to fill the slot -1
-	constexpr std::pair<int, int> getNumberToDiscard() const
-	{
-		return { m_possibleActivities.size() - 1,static_cast<int>(m_possibleStaff.size()) - 1};
-	}
-
-	//Returns the type (for parent container type checking)
-	constexpr Type getType()
-	{
-		return Type::ScheduleSlot;
-	}
-
-	//returns the time which this schedule slot occurs at
-	constexpr int getTime() const
-	{
-		return m_time;
-	}
-
-	//adds a given staff member to the possible staff to fill this slot
-	void addPossibleStaff(Staff* staff)
-	{
-		m_possibleStaff.push_back(staff);
-	}
-
-	//removes a spot from their respective possible list depending on their type
-	void removeFromThis(SpotWrapper* spot)
-	{
-		if (spot->getType() == Type::Activity)
-			removeSpot(spot, m_possibleActivities);
-		else
-			removeSpot(spot, m_possibleStaff);
-	}
 
 };
 
@@ -1001,7 +1005,7 @@ int addActivity(std::string line, std::vector <Activity>& activities, const int 
 
 	int timesPerCycle{ std::stoi(line) }; //rest of line after times avaible is times per cycle
 
-	activities.push_back(Activity(activityName, timesPerCycle)); //add activity to activities array
+	//activities.push_back(Activity(activityName, timesPerCycle)); //add activity to activities array
 	return timesPerCycle;
 }
 
@@ -1103,7 +1107,7 @@ void readInStaff(std::ifstream& myReader, std::vector <ActivityCategory>& catego
 		std::vector<ScheduleSlot*> timesAvailable{}; //holds pointers to the schedule slots corresponding to the times the staff can lead at
 		getScheduleSlots(availableTimes, timesAvailable); //fills the list of pointers using the indecies of the times that the staff can lead at 
 
-		//staff.emplace_back(name, timesAvailable, preferred, neutral, unpreferred); //adds staff member to staff vector
+		staff.emplace_back(name, 10, preferred, neutral, unpreferred, timesAvailable); //adds staff member to staff vector
 
 	}
 }
