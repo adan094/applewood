@@ -1160,6 +1160,12 @@ int readInActivityCategories(std::vector <ActivityCategory>& categories, std::ve
 	return activityID; //retuirns the file activityid (total number of activities)
 }
 
+//adds a schedule slot for each time period to the scheduleSlots vector
+void assignScheduleSlots(std::vector <ScheduleSlot> &scheduleSlots)
+{
+ for(std::size_t index {0}; index< periodsInDay* daysInCycle; ++index)
+  scheduleSlot.emplace_back(index);
+}
 
 int main()
 {
@@ -1172,11 +1178,12 @@ int main()
 		timeSlots.push_back(i);
 
 	//ParticipantGroup testGroup{ 1,timeSlots,50 };
-
+ 
+ std::vector <ScheduleSlot> scheduleSlots{};
 	std::vector <ActivityCategory> categories{};
 	std::vector <Staff> staff{};
-
-	int maxID{};
+ 
+ assignScheduleSlots(scheduleSlots);
 
 	try
 	{
