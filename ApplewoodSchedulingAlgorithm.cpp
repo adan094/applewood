@@ -950,7 +950,7 @@ std::size_t findEnd(std::string_view string)
 }
 
 
-void getValues(std::string& line, std::vector<std::size_t>& fillVector)
+void getSceduleSlots(std::string& line, std::vector<ScheduleSlot *>& fillVector, std::vector <ScheduleSlot> &scheduleSlots)
 {
 	std::size_t(*endpoint)(std::string_view)(&findNextSemi); //initializes endpoint function pointer and sets it to point to find next semi
 	bool loopAgain{ true }; //controls whether or not the loop will continue iterating
@@ -967,7 +967,7 @@ void getValues(std::string& line, std::vector<std::size_t>& fillVector)
 		std::size_t endRange{ static_cast<std::size_t>(std::stoi(line.substr(line.find('-') + 1,endpoint(line)))) - 1 }; //gets end of range
 		for (std::size_t index{ startRange }; index <= endRange; ++index) //while within range update time available to true and iterate total times available
 		{
-			fillVector.push_back(index); //adds index to list of values in vector
+			fillVector.push_back(&scheduleSlots[index]); //adds a pointer to the scheduleSlot at the given time to the list of times it can occur at
 		}
 		line = line.substr(endpoint(line) + 1, line.size() - endpoint(line)); //remove range added from range list
 	}
@@ -988,25 +988,6 @@ void getStrings(std::string_view line, std::vector<std::string>& fillVector)
 		fillVector.emplace_back(line.substr(0, endpoint(line))); //adds index to list of values in vector
 		line = line.substr(endpoint(line) + 1, line.size() - endpoint(line)); //remove range added from range list
 	}
-}
-
-//adds activity to activities array, returns times per cycle for activity
-int addActivity(std::string line, std::vector <Activity>& activities, const int activityID)
-{
-	std::size_t comma{ line.find(',') }; //find break between activity name and activity times available
-	std::string activityName{ line.substr(0,comma) }; //stores activity name
-	line = line.substr(comma + 1, line.size() - comma - 1); //removes activty name from line
-
-
-	std::vector < std::size_t > timesAvailable{};//array storing if activity is available at each time slot
-
-
-	getValues(line, timesAvailable); //gets times available from line and adds it to times avaliable vector
-
-	int timesPerCycle{ std::stoi(line) }; //rest of line after times avaible is times per cycle
-
-	//activities.push_back(Activity(activityName, timesPerCycle)); //add activity to activities array
-	return timesPerCycle;
 }
 
 //add activity category to categories vector
@@ -1112,52 +1093,32 @@ void readInStaff(std::ifstream& myReader, std::vector <ActivityCategory>& catego
 	}
 }
 
-//reads in activity and activity category info and stores it in categories vector
-int readInActivityCategories(std::vector <ActivityCategory>& categories, std::vector <Staff>& staff)
+//reads in activitiy info, creates activity objects and stores them in activities vector
+void readInActivities(std::ifstream& myReader, std::vector <Activity>& activities, std::vector <ScheduleSlot>& scheduleSlots)
 {
-	std::ifstream myReader{ "scheduling.csv" }; //selects file "scheduling.csv" to read in
-	int activityID{ 0 }; //sets next activity id to 0
-	try
-	{
-		if (!myReader) //if reader fails to open file throw exception
-			throw "File could not be opened\n";
 
 		std::string line{};//holds line data
 		std::getline(myReader, line); //skips first line (column headers)
-		std::string prevCategory{ "" }; //holds previous activity category name
 
-
-
-		std::vector <Activity> activities{};//vector storing activities belonging to activity group
-		int timesPerCycle{ 0 }; //holds total number of times activity category will occur
 		while (true) //loops until broken (when staff starts to be read in), reasds one activity at a time ine
 		{
 			std::getline(myReader, line); //gets line
 			std::size_t comma{ line.find(',') };//location of break between category name and activity name
-			std::string category{ line.substr(0,comma) }; //category name
+			std::string categoryName{ line.substr(0,comma) }; //category name
 
 			if (category == "Staff") //once staff is hit breaks and starts to read in staff
 				break;
+		 std::size_t comma{ line.find(',') }; //find break between activity name and activity times available
+	  std::string activityName{ line.substr(0,comma) }; //stores activity name
+	  line = line.substr(comma + 1, line.size() - comma - 1); //removes activty name from line
+	  std::vector < ScheduleSlot* > timesAvailable{};//array storing if activity is available at each time slot
 
-			if (category != prevCategory && prevCategory != "") //if category is new (not first category)
-			{
-				createActivityCategory(categories, prevCategory, activities); //create previous activity category
-				activities.clear(); //reset activities
-			}
-			prevCategory = category; //ensures category is updated (important for first iteration)
-			timesPerCycle += addActivity(line.substr(comma + 1, line.size() - comma - 1), activities, activityID); //adds activity using line excluidng activity category information
-			++activityID; //iterates activity id
-		}
-		createActivityCategory(categories, prevCategory, activities); //creates final activity category
-		readInStaff(myReader, categories, staff); //reads in staff
-	}
-	catch (const char* errorMessage) //if file could not be opened
-	{
-		std::cerr << errorMessage; //print file error message
-		throw; //rethrow exception
-	}
+   getScheduleSlots(line, timesAvailable, scheduleSlots); //gets times available from line and adds it to times avaliable vector
 
-	return activityID; //retuirns the file activityid (total number of activities)
+	  int timesPerCycle{ std::stoi(line) }; //rest of line after times avaible is times per cycle
+
+	  activities.push_back(Activity(activityName, timesPerCycle, timesAvailable)); //add activity to activities array
+  }
 }
 
 //adds a schedule slot for each time period to the scheduleSlots vector
@@ -1180,15 +1141,27 @@ int main()
 	//ParticipantGroup testGroup{ 1,timeSlots,50 };
  
  std::vector <ScheduleSlot> scheduleSlots{};
-	std::vector <ActivityCategory> categories{};
+	std::vector <Activity> activities{}; 
 	std::vector <Staff> staff{};
  
  assignScheduleSlots(scheduleSlots);
 
 	try
 	{
-		maxID = readInActivityCategories(categories, staff);
-	}
+  try
+	 {
+		 if (!myReader) //if reader fails to open file throw exception
+			 throw "File could not be opened\n";
+   std::ifstream myReader{ "scheduling.csv" }; //selects file "scheduling.csv" to read in
+		 readInActivities(myReader, activities, scheduleSlots); //reads in activities and assigns them to the activities vector
+   readInStaff(myReader, categories, staff); //reads in staff
+	 }
+	 catch (const char* errorMessage) //if file could not be opened
+	 {
+		 std::cerr << errorMessage; //print file error message
+		 throw; //rethrow exception
+	 }
+ }
 	catch (...)
 	{
 		std::cerr << "A fatal error has occured\n";
