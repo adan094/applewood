@@ -1001,23 +1001,19 @@ void createActivityCategory(std::vector <ActivityCategory>& categories, std::str
 	categories.push_back(ActivityCategory(category, activities));
 }
 
-//takes in a lsit of activity anmes to search for and the list of activity categories and fills a list of pointers to those activities
-//note categories cannot be const since their activities are added to the activity list which may later be changed via their pointer
-void getActivities(const std::vector<std::string>& activityNames, std::vector<Activity*>& activities, std::vector <ActivityCategory>& categories)
+//takes in a list of activity names to search for and fills a list of pointers to those activities
+//note activities cannot be const since they are added to the activity list which may later be changed via their pointer
+void getActivities(const std::vector<std::string>& activityNames, std::vector<Activity*>& activityPointers, std::vector <Activity>& activities)
 {
 	for (std::size_t i{ 0 }; i < activityNames.size(); ++i) //loops through all activities we are searching for
 	{
 		bool loopAgain{ true }; //control variable that allows the process to skip to searching for next activity once the activity has been found
-		for (std::size_t j{ 0 }; j < categories.size() && loopAgain; ++j) //loops through activity categories while there are more to search and the activity has not yet been found
-		{
-			//allows us to only copy the list of activitivies int the activity category one time
-			std::vector<Activity>* categoryActivities{ &(categories[j].getActivities()) };  //holds a pointer to the list of activities in the activity category
-			for (std::size_t k{ 0 }; k < categoryActivities->size() && loopAgain; ++k) //loops through activities while there are more to search and the activity has not yet been found
+			for (std::size_t k{ 0 }; k < activities->size() && loopAgain; ++k) //loops through activities while there are more to search and the activity has not yet been found
 			{
 
-				if ((*categoryActivities)[k].getName() == activityNames[i]) //if the activity is the activity we are searching for (it has the same name as the next activity in the list of activities we are searching for)
+				if (activities[k].getName() == activityNames[i]) //if the activity is the activity we are searching for (it has the same name as the next activity in the list of activities we are searching for)
 				{
-					activities.push_back(&(*categoryActivities)[k]); //add a pointer to the activity to the activities vector
+					activityPointers.push_back(&(activites[k])); //add a pointer to the activity to the activities vector
 					loopAgain = false; //marks activity as found, allowing process to skip to next activity
 				}
 			}
@@ -1038,17 +1034,17 @@ void getScheduleSlots(const std::vector<std::size_t> avail, std::vector<Schedule
 }
 
 //takes in a string and a breakpoint and fiils the inputted activity pointers vector with activity pointers to the activites found within the string
-void processActivitiesListFromFileToVectorofActivityPointers(std::string_view line, std::vector<Activity*>& activityPointers, std::vector <ActivityCategory>& categories, const std::size_t breakLocation)
+void processActivitiesListFromFileToVectorofActivityPointers(std::string_view line, std::vector<Activity*>& activityPointers, std::vector <Activity>& activities, const std::size_t breakLocation)
 {
 	std::string raw{ line.substr(0,breakLocation) };  //hold raw list of activities
 	std::vector<std::string> names{}; //holds list of activities names
 	getStrings(raw, names); //processes raw list and fills list of activities names
-	getActivities(names, activityPointers, categories); //gets list of pointers to activities using their names and fills activity pointers vector
+	getActivities(names, activityPointers, activities); //gets list of pointers to activities using their names and fills activity pointers vector
 }
 
-//rads in staff from file and stores in the staff vector
-//note cateogries is non const due to getActivities
-void readInStaff(std::ifstream& myReader, std::vector <ActivityCategory>& categories, std::vector <Staff>& staff)
+//reads in staff from file and stores in the staff vector
+//note activities is non const due to getActivities
+void readInStaff(std::ifstream& myReader, std::vector <Activity>& activities, std::vector <Staff>& staff)
 {
 	std::string line{};//holds line data
 	while (std::getline(myReader, line)) //iterates for each staff in the file
@@ -1061,27 +1057,27 @@ void readInStaff(std::ifstream& myReader, std::vector <ActivityCategory>& catego
 		line = line.substr(breakLocation + 1, line.size()); //line removes staff name and break
 		std::vector<Activity*> preferred{}; //holds list of pointers to preffered activites
 		breakLocation = line.find(','); //location of next breakpoint (at the end of the list of preffered activites)
-		processActivitiesListFromFileToVectorofActivityPointers(line, preferred, categories, breakLocation); //fills preferred vector with pointer to activities between teh previous and current breakpoints
+		processActivitiesListFromFileToVectorofActivityPointers(line, preferred, activities, breakLocation); //fills preferred vector with pointer to activities between the previous and current breakpoints
 
 		line = line.substr(breakLocation + 1, line.size()); //line removes list of preferred names and break
 		std::vector<Activity*> neutral{}; //holds list of pointers to preffered activites
 		breakLocation = line.find(','); //location of next breakpoint (at the end of the list of neutral activites)
-		processActivitiesListFromFileToVectorofActivityPointers(line, neutral, categories, breakLocation); //fills neutral vector with pointer to activities between teh previous and current breakpoints
+		processActivitiesListFromFileToVectorofActivityPointers(line, neutral, activities, breakLocation); //fills neutral vector with pointer to activities between the previous and current breakpoints
 
 		line = line.substr(breakLocation + 1, line.size()); //line removes neutral names and break
 		std::vector<Activity*> unpreferred{}; //holds list of pointers to preffered activites
 		breakLocation = line.find(','); //location of next breakpoint (at the end of the list of unpreferred activites)
-		processActivitiesListFromFileToVectorofActivityPointers(line, unpreferred, categories, breakLocation); //fills unpreferred vector with pointer to activities between teh previous and current breakpoints
+		processActivitiesListFromFileToVectorofActivityPointers(line, unpreferred, activities, breakLocation); //fills unpreferred vector with pointer to activities between the previous and current breakpoints
 
 		line = line.substr(breakLocation + 1, line.size()); //line removes unpreferred names and break
 		std::vector<std::size_t> staffBreaks{}; //stores vector of break times for this staff member
 		getValues(line, staffBreaks); //gets staff breaks from line and adds ranges to staffBreaks vector
 		std::size_t j{ 0 }; //holds the time of the next break as we search through all schedule slots
-		std::vector<std::size_t> availableTimes{}; //holds all the times when the staff can lead (not break times)
+		std::vector<ScheduleSlot*> availableTimes{}; //holds all the schedule slots where the staff can lead (not break times)
 		for (std::size_t i{ 0 }; i < periodsInDay * daysInCycle; ++i) //loops throough all possible schedule slots
 		{
 			if (i != staffBreaks[j]) //if the schedule slot is not in the break list
-				availableTimes.push_back(i); //add the schedule slot time to the times available vector
+				availableTimes.push_back(&scheduleSlots[i]); //add a pointer to the schedule slot to the times available vector
 			else if (j < staffBreaks.size() - 1) //if the schedule slot is in the break list and it is not the last break
 				++j; //iterate to check the next break schedule slot
 		}
@@ -1154,7 +1150,7 @@ int main()
 			 throw "File could not be opened\n";
    std::ifstream myReader{ "scheduling.csv" }; //selects file "scheduling.csv" to read in
 		 readInActivities(myReader, activities, scheduleSlots); //reads in activities and assigns them to the activities vector
-   readInStaff(myReader, categories, staff); //reads in staff
+   readInStaff(myReader, actuvities, staff); //reads in staff
 	 }
 	 catch (const char* errorMessage) //if file could not be opened
 	 {
