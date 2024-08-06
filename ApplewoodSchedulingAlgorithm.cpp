@@ -11,7 +11,6 @@
 constexpr int daysInCycle{ 5 }; //number of days in generated schedule
 constexpr int periodsInDay{ 10 }; //number of periods (schedule slots) in each day
 
-
 std::random_device rd{};
 std::seed_seq ss{ rd(), rd(), rd(), rd(), rd(), rd(), rd(), rd() }; //generates a seed sequence using the OS's random device
 std::mt19937 mt{ ss }; //seeds merene twister using the generated seed sequence
@@ -209,7 +208,12 @@ public:
 //a list of all potential rooms
 enum class Room
 {
- any //any room
+ any, //any room
+};
+
+enum class Level
+{
+ maxLevel, //used for finding number of levels
 };
 
 // Represents each schedule time period
@@ -218,15 +222,17 @@ class ScheduleSlot : public SpotWrapper
 	const int m_time{ 0 }; //the time which this schedule slot takes place at
 	std::vector <Activity*> m_possibleActivities{}; //A list of possible activities to occur in this slot
 	std::vector <Staff*> m_possibleStaff{}; //A list of possible staff to occur in this slot
- Room::Room m_room{}; //the room this slot occurs in
+ Room m_room{}; //the room this slot occurs in
+ Level m_level{}; //the group level of this scheduleSlot
 
 public:
 
 	ScheduleSlot() = default;
 
-	//intializes schedule slot using the time the slot occurs at
-	ScheduleSlot(const int time)
-		:m_time{ time }
+	//intializes schedule slot using the time the slot occurs at and its level
+	ScheduleSlot(const int time, const Level level)
+		:m_time{ time },
+  m_level{level}
 	{
 		m_timesPerCycle = 1;
 		m_timesLeftPerCycle = 1;
@@ -293,7 +299,7 @@ class Activity :public SpotWrapper
 	std::vector <Staff*> m_neutralStaff{}; //a list of the staff who are neutral towards leading this spot
 	std::vector <Staff*> m_unpreferredStaff{}; //a list of the staff who prefer not to lead this spot
 
- std::vector<Room::Room> potentialRooms{}; //a list of all rooms this activity can occur in
+ std::vector<Room> potentialRooms{}; //a list of all rooms this activity can occur in
 
 	//adds list of possible activities to this slot and adds this slot to the timeavailable of each of those activities
 	void setTimesAvailable(std::vector<ScheduleSlot*> &possibleSlots)
@@ -1035,9 +1041,9 @@ std::array<ScheduleSlot, daysInCycle* periodsInDay> ParticipantGroup::scheduleSl
 //takes in list of avilable times for a staff to elad at and adds a pointer to the schedule slot at each of those times to the scheduleSlotsAvailable list
 void getScheduleSlots(const std::vector<std::size_t> avail, std::vector<ScheduleSlot*> scheduleSlotsAvailable)
 {
-	for (std::size_t i{ 0 }; i < avail.size(); ++i)
+	for (std::size_t i{ 0 }; i < avail.size()*Level::maxLevel; ++i)
 	{
-		scheduleSlotsAvailable.push_back(&ParticipantGroup::scheduleSlots[i]);
+		scheduleSlotsAvailable.push_back(&ParticipantGroup::scheduleSlots[i%(periodsInDay*daysInCycle)]);
 	}
 }
 
@@ -1125,11 +1131,11 @@ void readInActivities(std::ifstream& myReader, std::vector <Activity>& activitie
   }
 }
 
-//adds a schedule slot for each time period to the scheduleSlots vector
+//adds a schedule slot for each time period per level to the scheduleSlots vector
 void assignScheduleSlots(std::vector <ScheduleSlot> &scheduleSlots)
 {
- for(std::size_t index {0}; index< periodsInDay* daysInCycle; ++index)
-  scheduleSlot.emplace_back(index);
+ for(std::size_t index {0}; index < periodsInDay * daysInCycle * Level::maxLevel; ++index)
+  scheduleSlot.emplace_back(index%(periodsInDay*daysInCycle));
 }
 
 int main()
@@ -1137,10 +1143,6 @@ int main()
 
 
 
-	std::vector <int> timeSlots{};
-
-	for (int i{ 0 }; i < 50; ++i)
-		timeSlots.push_back(i);
 
 	//ParticipantGroup testGroup{ 1,timeSlots,50 };
  
