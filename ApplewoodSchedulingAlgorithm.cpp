@@ -205,10 +205,11 @@ public:
 
 };
 
-//a list of all potential rooms
-enum class Room
+//Each room has a name and group level capacity
+struct Room
 {
- any, //any room
+ std::string name;
+ int capacity;
 };
 
 enum class Level
@@ -222,7 +223,7 @@ class ScheduleSlot : public SpotWrapper
 	const int m_time{ 0 }; //the time which this schedule slot takes place at
 	std::vector <Activity*> m_possibleActivities{}; //A list of possible activities to occur in this slot
 	std::vector <Staff*> m_possibleStaff{}; //A list of possible staff to occur in this slot
- Room m_room{}; //the room this slot occurs in
+ Room *m_room{nullptr}; //a pointer to the room this slot occurs in
  Level m_level{}; //the group level of this scheduleSlot
  std::vector<ScheduleSlot*> m_slotsAtSameTime{}; //the slots that occur at the same time as this slot
 
@@ -313,7 +314,7 @@ class Activity :public SpotWrapper
 	std::vector <Staff*> m_neutralStaff{}; //a list of the staff who are neutral towards leading this spot
 	std::vector <Staff*> m_unpreferredStaff{}; //a list of the staff who prefer not to lead this spot
 
- std::vector<Room> potentialRooms{}; //a list of all rooms this activity can occur in
+ std::vector<Room*> potentialRooms{}; //a list of pointers to all rooms this activity can occur in
 
 	//adds list of possible activities to this slot and adds this slot to the timeavailable of each of those activities
 	void setTimesAvailable(std::vector<ScheduleSlot*> &possibleSlots)
