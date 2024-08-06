@@ -1002,7 +1002,7 @@ std::size_t findEnd(std::string_view string)
 }
 
 
-void getSceduleSlots(std::string& line, std::vector<ScheduleSlot *>& fillVector, std::vector <ScheduleSlot> &scheduleSlots)
+void getScheduleSlots(std::string& line, std::vector<ScheduleSlot *>& fillVector, std::vector <ScheduleSlot> &scheduleSlots, const bool oneRange, const int offset)
 {
 	std::size_t(*endpoint)(std::string_view)(&findNextSemi); //initializes endpoint function pointer and sets it to point to find next semi
 	bool loopAgain{ true }; //controls whether or not the loop will continue iterating
@@ -1019,12 +1019,27 @@ void getSceduleSlots(std::string& line, std::vector<ScheduleSlot *>& fillVector,
 		std::size_t endRange{ static_cast<std::size_t>(std::stoi(line.substr(line.find('-') + 1,endpoint(line)))) - 1 }; //gets end of range
 		for (std::size_t index{ startRange }; index <= endRange; ++index) //while within range update time available to true and iterate total times available
 		{
-			fillVector.push_back(&scheduleSlots[index]); //adds a pointer to the scheduleSlot at the given time to the list of times it can occur at
-		}
+   if(oneRange)
+			 fillVector.push_back(&scheduleSlots[index+offset]); //adds a pointer to the scheduleSlots at the given time to the list of times it can occur at
+		 else
+   {
+    for(std::size_t j {index}; j<Level::maxLevel*daysInCycle*periodsInDay; j+=daysInCycle*PeriodsInDay)
+     fillVector.push_back(&scheduleSlots[j]);
+   }
+  }
 		line = line.substr(endpoint(line) + 1, line.size() - endpoint(line)); //remove range added from range list
 	}
 }
 
+void getScheduleSlots(std::string& line, std::vector<ScheduleSlot *>& fillVector, std::vector <ScheduleSlot> &scheduleSlots)
+{
+ getScheduleSlots(line,fillVector,scheduleSlots, false, 0);
+}
+
+void getScheduleSlots(std::string& line, std::vector<ScheduleSlot *>& fillVector, std::vector <ScheduleSlot> &scheduleSlots, const int offset)
+{
+ getScheduleSlots(line, fillVector, scheduleSlots, true, offset);
+}
 void getStrings(std::string_view line, std::vector<std::string>& fillVector)
 {
 	std::size_t(*endpoint)(std::string_view)(&findNextSemi); //initializes endpoint function pointer and sets it to point to find next semi
@@ -1108,11 +1123,15 @@ void processActivitiesListFromFileToVectorofActivityPointers(std::string_view li
 void readInStaff(std::ifstream& myReader, std::vector <Activity>& activities, std::vector <Staff>& staff)
 {
 	std::string line{};//holds line data
-	while (std::getline(myReader, line)) //iterates for each staff in the file
+	while (true) //iterates for each staff in the file
 	{
+
+  std::getline(myReader, line);
 		std::size_t breakLocation{ line.find(',') };//location of break between staff name and preferred lead activities
 		std::string name{ line.substr(0,breakLocation) }; //holds staff name
 
+  if(name=="Partcipants") //Once participants is read in, starts to read in participants
+   break;
 
 
 		line = line.substr(breakLocation + 1, line.size()); //line removes staff name and break
@@ -1185,16 +1204,26 @@ void assignScheduleSlots(std::vector <ScheduleSlot> &scheduleSlots)
   scheduleSlot.emplace_back(index%(periodsInDay*daysInCycle));
 }
 
-//adds participants at given times to the schedule slots for their group level at those times
-addParticipant(std::vector <ScheduleSlot> &scheduleSlots, ??? &timesAvailable, int startPoint)
-{
- //call ->addParticipant()
-}
-
 //reads in participants and adds them to each schedule slot they are participating in
 void readInParticipants(std::ifstream& myReader, std::vector <ScheduleSlot> &scheduleSlots)
 {
- addParticipant(scheduleSlots, timesAvailable, Level::level*periodsInDay*daysInCycle) //adds participant to schedule slots at the times they are participating in their level
+ std::string line{};//holds line data
+ while(std::getline(myReader, line)) //while there are still participants to read in
+ {
+  std::size_t comma{ line.find(',') };//location of break between participant name and times available
+	 line = line.substr(comma + 1, line.size() - comma - 1); //removes participant name from line
+	 char groupLevel {line[0]};
+  Level level {static_cast<Level>(groupLevel)};
+  line = line.substr(2, line.size()-2);
+  
+
+  std::vector < ScheduleSlot* > timesAvailable{};//array storing if participant is available at each time slot
+
+  getScheduleSlots(line, timesAvailable, scheduleSlots, Level::level*periodsInDay*daysInCycle); //gets times available from line and adds it to times avaliable vector
+
+  for(ScheduleSlot* scheduleSlot, timesAvailable)
+   scheduleSlot->addParticipant(timesAvailable); //adds participant to schedule slots at the times they are participating in their level
+ }
 }
 int main()
 {
