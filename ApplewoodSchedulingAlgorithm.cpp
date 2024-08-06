@@ -224,10 +224,13 @@ class ScheduleSlot : public SpotWrapper
 	std::vector <Staff*> m_possibleStaff{}; //A list of possible staff to occur in this slot
  Room m_room{}; //the room this slot occurs in
  Level m_level{}; //the group level of this scheduleSlot
+ std::vector<ScheduleSlot*> m_slotsAtSameTime{}; //the slots that occur at the same time as this slot
 
 public:
 
 	ScheduleSlot() = default;
+
+ 
 
 	//intializes schedule slot using the time the slot occurs at and its level
 	ScheduleSlot(const int time, const Level level)
@@ -285,6 +288,17 @@ public:
 		else
 			removeSpot(spot, m_possibleStaff);
 	}
+
+//returns the schedule slots occuring at the same time as this slot
+ std::vector<ScheduleSlot*>& getSlotsAtSameTime()
+ {
+  return m_slotsAtSameTime;
+ }
+
+ void addSlotAtSameTime(ScheduleSlot *slot)
+ {
+  m_slotsAtSameTime.push_back(slot);
+ }
 
 };
 
@@ -588,22 +602,16 @@ void SpotWrapper::add(SpotWrapper* spot)
 	else if (spot->getType() == Type::ScheduleSlot)
 	{
 		m_slots.push_back(static_cast<ScheduleSlot*>(spot));
+  //removes staff from list of availableStaff at the schedule slors at the same as the one they are being added to
+  for(ScheduleSlot* slot: m_slots[m_slots.size()-1).getSlotsAtSameTime())
+  {
+			  slot->remove(this);
+  }
  }
 			
-	}
 	else
 	{
 		m_staff.push_back(static_cast<Staff*>(spot));
-
-  //removes staff from list of availableStaff at the schedule slors at the same as the one they are being added to
-  for(SpotWrapper* availableSpot: m_availableSpots)
-  {
-   if(availableSpot::getType == Type::ScheduleSlot)
-   {
-    if(availableSpot->getTime()==spot->getTime()&&availableSpot()->getID()!=spot->getID())
-			  availableSpot->remove(this);
-   }
-  }
 	}
 
 	--m_timesLeftPerCycle; //decreases the times left to add to this spot
@@ -1057,6 +1065,15 @@ void getScheduleSlots(const std::vector<std::size_t> avail, std::vector<Schedule
 	{
 		scheduleSlotsAvailable.push_back(&ParticipantGroup::scheduleSlots[i%(periodsInDay*daysInCycle)]);
 	}
+ //adds slots at the same time to each slot's list
+ for(std::size_t i{0}; i < avail.size()*Level::maxLevel; ++i)
+ {
+  for(std::size_t j{i%avail.size()}; j < Level::maxLevel; j+=avail.size())
+  {
+   if(i!=j)
+    slot[i].addSlotAtSameTime(&slot[j]);
+  }
+ }
 }
 
 //takes in a string and a breakpoint and fiils the inputted activity pointers vector with activity pointers to the activites found within the string
