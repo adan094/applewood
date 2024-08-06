@@ -214,12 +214,17 @@ struct Room
 
 enum class Level
 {
+ A,
+ B,
+ C,
  maxLevel, //used for finding number of levels
 };
 
 // Represents each schedule time period
 class ScheduleSlot : public SpotWrapper
 {
+ int m_numberOfParticipants{0}; //the number of participants participating in this scheduleSlot
+
 	const int m_time{ 0 }; //the time which this schedule slot takes place at
 	std::vector <Activity*> m_possibleActivities{}; //A list of possible activities to occur in this slot
 	std::vector <Staff*> m_possibleStaff{}; //A list of possible staff to occur in this slot
@@ -299,6 +304,18 @@ public:
  void addSlotAtSameTime(ScheduleSlot *slot)
  {
   m_slotsAtSameTime.push_back(slot);
+ }
+
+//adds a participant to this schedule slot
+ void addParticipant()
+ {
+  ++m_numberOfParticipants;
+ }
+
+//gets the number if participants, participating in this schedule slot
+ constexpr int getNumberOfParticipants() const
+ {
+  return m_numberOfParticipants
  }
 
 };
@@ -1168,6 +1185,17 @@ void assignScheduleSlots(std::vector <ScheduleSlot> &scheduleSlots)
   scheduleSlot.emplace_back(index%(periodsInDay*daysInCycle));
 }
 
+//adds participants at given times to the schedule slots for their group level at those times
+addParticipant(std::vector <ScheduleSlot> &scheduleSlots, ??? &timesAvailable, int startPoint)
+{
+ //call ->addParticipant()
+}
+
+//reads in participants and adds them to each schedule slot they are participating in
+void readInParticipants(std::ifstream& myReader, std::vector <ScheduleSlot> &scheduleSlots)
+{
+ addParticipant(scheduleSlots, timesAvailable, Level::level*periodsInDay*daysInCycle) //adds participant to schedule slots at the times they are participating in their level
+}
 int main()
 {
 
@@ -1190,7 +1218,8 @@ int main()
 			 throw "File could not be opened\n";
    std::ifstream myReader{ "scheduling.csv" }; //selects file "scheduling.csv" to read in
 		 readInActivities(myReader, activities, scheduleSlots); //reads in activities and assigns them to the activities vector
-   readInStaff(myReader, actuvities, staff); //reads in staff
+   readInStaff(myReader, activities, staff); //reads in staff
+   readInParticipants(myReader, scheduleSlots); //reads in paticipants
 	 }
 	 catch (const char* errorMessage) //if file could not be opened
 	 {
