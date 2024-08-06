@@ -206,13 +206,19 @@ public:
 
 };
 
+//a list of all potential rooms
+enum class Room
+{
+ any //any room
+};
+
 // Represents each schedule time period
 class ScheduleSlot : public SpotWrapper
 {
 	const int m_time{ 0 }; //the time which this schedule slot takes place at
 	std::vector <Activity*> m_possibleActivities{}; //A list of possible activities to occur in this slot
 	std::vector <Staff*> m_possibleStaff{}; //A list of possible staff to occur in this slot
-
+ Room::Room m_room{}; //the room this slot occurs in
 
 public:
 
@@ -286,6 +292,8 @@ class Activity :public SpotWrapper
 	std::vector <Staff*> m_preferredStaff{}; //a list of the staff who prefer to lead this spot
 	std::vector <Staff*> m_neutralStaff{}; //a list of the staff who are neutral towards leading this spot
 	std::vector <Staff*> m_unpreferredStaff{}; //a list of the staff who prefer not to lead this spot
+
+ std::vector<Room::Room> potentialRooms{}; //a list of all rooms this activity can occur in
 
 	//adds list of possible activities to this slot and adds this slot to the timeavailable of each of those activities
 	void setTimesAvailable(std::vector<ScheduleSlot*> &possibleSlots)
