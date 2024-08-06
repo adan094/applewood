@@ -574,9 +574,9 @@ void SpotWrapper::remove(SpotWrapper* spot)
 	{
 		removeFromThis(spot);
 	}
-
-
 }
+
+
 
 //adds a given spot to this spot and removes this spot from other spots if it has been filled
 void SpotWrapper::add(SpotWrapper* spot)
@@ -588,10 +588,22 @@ void SpotWrapper::add(SpotWrapper* spot)
 	else if (spot->getType() == Type::ScheduleSlot)
 	{
 		m_slots.push_back(static_cast<ScheduleSlot*>(spot));
+ }
+			
 	}
 	else
 	{
 		m_staff.push_back(static_cast<Staff*>(spot));
+
+  //removes staff from list of availableStaff at the schedule slors at the same as the one they are being added to
+  for(SpotWrapper* availableSpot: m_availableSpots)
+  {
+   if(availableSpot::getType == Type::ScheduleSlot)
+   {
+    if(availableSpot->getTime()==spot->getTime()&&availableSpot()->getID()!=spot->getID())
+			  availableSpot->remove(this);
+   }
+  }
 	}
 
 	--m_timesLeftPerCycle; //decreases the times left to add to this spot
