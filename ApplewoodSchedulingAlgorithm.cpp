@@ -1232,9 +1232,10 @@ int main()
 		std::cerr << "A fatal error has occured\n";
 	}
 
-	std::sort(categories.begin(), categories.end(), [](ActivityCategory first, ActivityCategory second)
+ //sorts scheduleSlots by most participants
+	std::sort(scheduleSlots.begin(), scheduleSlots.end(), [](ScheduleSlot &first, ScheduleSlot &second)
 		{
-			return first.getTimesPerCycle() < second.getTimesPerCycle();
+			return first.getNumberOfParticipants() > second.getNumberOfParticipants();
 		});
 
 	//testGroup.addActivities(categories, maxID);
