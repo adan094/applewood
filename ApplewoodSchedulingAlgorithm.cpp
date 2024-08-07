@@ -802,7 +802,7 @@ public:
 class ParticipantGroup
 {
 	int m_participants{};
-	std::vector <int> m_timeSlots{};
+	std::vector <ScheduleSlot*> m_ScheduleSlots{};
 	int m_totalTimeSlots{};
 
 
@@ -811,6 +811,13 @@ public:
 	static std::array<ScheduleSlot, daysInCycle* periodsInDay> scheduleSlots;
 
 	ParticipantGroup() = default;
+
+ //use given pointers to move list of Schedule Slots between them and initialize member variables
+ ParticipantGroup(const ScheduleSlot* startOfList, const ScheduleSlot* endOfList)
+ :m_scheduleslots {std::move(startOfList, endOfList)},
+  m_participants {m_scheduleSlots[0]->getParticipants()},
+  m_totalTimeSlots {m_scheduleSlots.size()}
+ {}
 /*
 	ParticipantGroup(const int participants, std::vector <int>& timeSlots, const int totalTimeSlots)
 		:m_participants{ participants },
@@ -1284,6 +1291,21 @@ int main()
 		{
 			return first.getNumberOfParticipants() > second.getNumberOfParticipants();
 		});
+
+ std::vector <ScheduleSlot*> startOfBlocks{&scheduleSlots[0]}; //holds the starting slot of each block of schedule slots with same number of participants
+ std::vector <ParticipantGroup> participantGroups{}; //holds all blocks 
+ 
+ //loop through sorted list of schedule slots
+ for(auto &endOfBlock: scheduleSlots)
+ {
+  //starts new block when number of participants change
+  if(endOfBlock.getNumberOfParticipants!= startOfBlocks[startOfBlocks.size()-1]->getNumberOfParticipants)
+   startOfBlocks.push_back[&endOfBlock];
+ }
+
+ //creates participant group blocks and adds them to list
+ for(std::size_t index{1}; index<startOfBlocks.size(); ++index)
+  participantGroups.emplace_back{ParticipantGroup(startOfBlocks[index-1],startOfBlocks[index]-1)};
 
 	//testGroup.addActivities(categories, maxID);
 
