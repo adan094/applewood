@@ -805,6 +805,17 @@ class ParticipantGroup
 	std::vector <ScheduleSlot*> m_ScheduleSlots{};
 	int m_totalTimeSlots{};
 
+ //removes all schedule slots not in group from possible activities
+ void pruneActivities()
+ {
+  
+ }
+
+ //removes all schedule slots not in group from possible staff
+ void pruneStaff()
+ {
+
+ }
 
 public:
 
@@ -812,177 +823,20 @@ public:
 
 	ParticipantGroup() = default;
 
- //use given pointers to move list of Schedule Slots between them and initialize member variables
- ParticipantGroup(const ScheduleSlot* startOfList, const ScheduleSlot* endOfList)
- :m_scheduleslots {std::move(startOfList, endOfList)},
+ //use given pointers and lists to copy list of Schedule Slots, activities and staff and initialize member variables
+ ParticipantGroup(const ScheduleSlot* startOfList, const ScheduleSlot* endOfList, std::vector<Activity> &activities, std::vector<Staff> &staff)
+ :m_scheduleslots {std::copy(startOfList, endOfList)}, //gets copy so that we can fill spots using only slots in this group
   m_participants {m_scheduleSlots[0]->getParticipants()},
   m_totalTimeSlots {m_scheduleSlots.size()}
  {}
-/*
-	ParticipantGroup(const int participants, std::vector <int>& timeSlots, const int totalTimeSlots)
-		:m_participants{ participants },
-		m_timeSlots{ std::move(timeSlots) },
-		m_totalTimeSlots(totalTimeSlots)
-	{
-	}
 
+ //gets total time slots
 	constexpr int getTotalTimeSlots() const
 	{
 		return m_totalTimeSlots;
 	}
 
-	//returns whether a given range is filled s
-	bool rangeIsFilled(const int begin, const int end, const int range, std::vector<int>& slotsAvailable)
-	{
-		auto iterator{ scheduleSlots.begin() + begin };
-		while (iterator < scheduleSlots.begin() + end)
-		{
 
-			if (iterator->getActivity() == nullptr)
-				slotsAvailable.push_back((iterator)-scheduleSlots.begin());
-			++iterator;
-		}
-		if (slotsAvailable.size() == 0)
-		{
-			std::cerr << "i";  //for bug testing
-
-			return true;
-		}
-
-		return false;
-	}
-
-	//return index of random empty slot within range
-	int findEmptySlotInRange(const int range, const int idealSlots, Activity* activity, std::vector<int>& slotsAvailable)
-	{
-		int slotIndex;
-		int endRand{ 0 };
-		if (activity->getTimesPerCycle() > 0)
-			endRand = static_cast<int>((idealSlots - activity->getOffset()) / activity->getTimesPerCycle());
-		std::uniform_int_distribution randInRange{ 0,endRand }; //random spot within range
-		do
-		{
-
-			std::uniform_int_distribution randslotAvailable{ 0,static_cast<int>(slotsAvailable.size() - 1) };
-			slotIndex = activity->getTimesAvailable()[slotsAvailable[randslotAvailable(mt)]]; //chooses new schedule slot
-
-		} while (scheduleSlots[slotIndex].getActivityCategory() != nullptr);// find new value while schedule slot is already filled
-		return slotIndex;
-	}
-
-	//finds an appropriate slot to add teh activity category to
-	int findSlot(const int idealSlots, const int offset, std::vector <int>& doneRanges, std::uniform_int_distribution<int>randRange, const std::vector < std::size_t >& unfilledSlots, Activity* activity)
-	{
-		while (true) //loops until appropriate slot is found
-		{
-			int range = randRange(mt); //finds random range
-
-			auto found = std::find(doneRanges.begin(), doneRanges.end(), range);
-			if (found == doneRanges.end()) //if range does not already contain activity category
-			{
-				int begin{ 0 };//starts at 0 if first category range prevent going out of bounds
-
-				int rangeEnd{ (range + 1) * (m_totalTimeSlots - offset) / idealSlots };
-
-				int end{ std::min(rangeEnd,  static_cast<int>(activity->getTotalTimesAvailable())) }; //find end of range
-
-				doneRanges.push_back(range); //adds range to filled list 
-
-				std::vector<int> slotsAvailable{};
-				if (!rangeIsFilled(begin, end, range, slotsAvailable))//if range is not filled and is available
-				{
-					return findEmptySlotInRange(range, idealSlots, activity, slotsAvailable); //adds to given range
-				}
-
-			}
-			else if (idealSlots <= doneRanges.size()) //if all (or all but one) ranges are full
-			{
-
-				std::uniform_int_distribution randSlot{ 0,static_cast<int>(unfilledSlots.size() - 1) };
-				return static_cast<int>(unfilledSlots[randSlot(mt)]); //returns a random empty slot
-			}
-
-		}
-
-	}
-
-	void assignActivityCategory(const int idealSlots, std::vector <std::vector<int>>& finishedRanges, ActivityCategory& activityCategory, std::vector < std::size_t >& unfilledSlots)
-	{
-		//loops until all of activity categories spots have been filled
-		for (int activities{ 0 }; activities < static_cast<int>(activityCategory.getActivities().size()); ++activities) //fill a total of idealSlots slots
-		{
-			std::cerr << '?' << activities << ' ' << static_cast<int>(activityCategory.getActivities().size()) << "?\n";
-			Activity* activity{ activityCategory.getNextActivity() };
-
-			activity->setOffset(m_timeSlots);
-
-			std::uniform_int_distribution randRange{ 0,idealSlots }; //random range
-
-			//fills activity category
-			int activityId{ activity->getID() };
-			int activitySlotsLeft{ activity->getTimesPerCycle() - static_cast<int>(finishedRanges[activityId].size()) };
-
-
-			for (int idealActivitySlotsLeft{ activitySlotsLeft }; idealActivitySlotsLeft > 0; --idealActivitySlotsLeft)
-			{
-				int slotIndex{ findSlot(idealSlots, activity->getOffset(), finishedRanges[activityId], randRange, unfilledSlots, activity) }; //chooses a slot
-				scheduleSlots[slotIndex].addActivityCategory(activityCategory); //adds activity category to chosen schedule slot
-				unfilledSlots.erase((std::find(unfilledSlots.begin(), unfilledSlots.end(), slotIndex))); //removes slot from unfilled slots vector
-			}
-			int a{ 4 };
-			activityCategory.incActivityCounter();
-
-		}
-	}
-
-	//fills all the schedule slots in this participant group
-	void fillAllSlots(std::vector <ActivityCategory>& categories, std::vector < std::size_t >& unfilledSlots, std::vector <std::vector<int>>& finishedRanges)
-	{
-		std::size_t catIndex{ 0 };
-		while (unfilledSlots.size() > 0 && catIndex < categories.size()) //loops until all slots are filled
-		{
-			//slots left to fill for activity category in this participant group is total slots for activity category multiplied by % of total time slots in this participant group
-			double percentOfTotal{ (static_cast<double>(m_totalTimeSlots) / (periodsInDay * daysInCycle)) };
-			int idealSlots{ static_cast<int>(categories[catIndex].getTimesPerCycle() * percentOfTotal) };
-
-
-
-			assignActivityCategory(idealSlots, finishedRanges, categories[catIndex], unfilledSlots);
-			++catIndex; //iterates activity category
-		}
-	}
-
-	//finds slots already filled prior to this participant group
-	void findAlreadyFilledSlots(std::vector <ActivityCategory>& categories, std::vector < std::size_t >& unfilledSlots, std::vector <std::vector<int>>& finishedRanges)
-	{
-
-		for (std::size_t index{ 0 }; index < m_timeSlots.size(); ++index) //loops through all schedule slots in the participant gorup
-		{
-			if (scheduleSlots[index].getActivityCategory() == nullptr)
-				unfilledSlots.push_back(index); //adds slot to unfilled list if slot is unfilled
-
-			else //if slot is filled
-			{
-				int64_t activityCategory{ std::find_if(categories.begin(),categories.end(),[&](ActivityCategory cat) //finds activity category in schedule slot
-					{
-						if (cat.getName() == scheduleSlots[index].getActivityCategory()->getName())
-							return true;
-						return false;
-					}) - categories.begin() };
-
-				int64_t activity{ std::find_if(categories[activityCategory].getActivities().begin(),categories[activityCategory].getActivities().begin(),[&](Activity act) //finds activity category in schedule slot
-					{
-						if (act.getName() == scheduleSlots[index].getActivity()->getName())
-							return true;
-						return false;
-					}) - categories[activityCategory].getActivities().begin() };
-
-				//adds already filled range to array corresponding to it's activity category
-				finishedRanges[categories[activityCategory].getActivities()[activity].getID()].push_back(index / categories[activityCategory].getActivities()[activity].getTimesPerCycle());
-			}
-		}
-
-	}
 
 	//prints out cyclical schedule
 	void printCycleSchedule()
@@ -990,26 +844,12 @@ public:
 		for (std::size_t j{ 0 }; j < daysInCycle; ++j) //for each day in cycle
 		{
 			for (std::size_t i{ 0 }; i < periodsInDay; ++i) //for each period in day, print the schedule slot
-				std::cout << i + 1 << ". " << scheduleSlots[j * 10 + i].getActivityCategory()->getName() << " " << scheduleSlots[j * 10 + i].getActivity()->getName() << "\n";
+				std::cout << i + 1 << ". " << scheduleSlots[j * 10 + i].getActivity()->getName() << "\n";
 			std::cout << "---------------------------\n"; //divider between days
 		}
 	}
 
-	//fills this participant group's schedule with activities
-	void addActivities(std::vector <ActivityCategory>& categories, const int maxID)
-	{
-		std::vector <std::vector<int>> finishedRanges(maxID + 1); //stores which ranges are already filled with each activity category
-		std::vector < std::size_t > unfilledSlots{}; //stores slots which are unfilled
 
-		findAlreadyFilledSlots(categories, unfilledSlots, finishedRanges); //finds slots already filled prior to this participant group
-
-		fillAllSlots(categories, unfilledSlots, finishedRanges); //fills all the schedule slots in this participant group
-
-		printCycleSchedule(); //prints out cyclical schedule
-
-		return;
-	}
-	*/
 };
 
 
@@ -1305,7 +1145,7 @@ int main()
 
  //creates participant group blocks and adds them to list
  for(std::size_t index{1}; index<startOfBlocks.size(); ++index)
-  participantGroups.emplace_back{ParticipantGroup(startOfBlocks[index-1],startOfBlocks[index]-1)};
+  participantGroups.emplace_back{ParticipantGroup(startOfBlocks[index-1],startOfBlocks[index]-1, activities, staff)};
 
 	//testGroup.addActivities(categories, maxID);
 
