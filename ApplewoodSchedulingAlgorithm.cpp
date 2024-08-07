@@ -205,12 +205,30 @@ public:
 
 };
 
+
+
+
 //Each room has a name and group level capacity
 struct Room
 {
  std::string name;
  int capacity;
 };
+
+//converts char to Level
+Level getLevel(const char c) const
+{
+ switch(c)
+ {
+  case ('A'):
+   return Level::A;
+  case('B'):
+   return Level::B;
+  case('C'):
+   return Level::C;
+  throw "Invlaid char to level conversion";
+ }
+}
 
 enum class Level
 {
@@ -1213,16 +1231,16 @@ void readInParticipants(std::ifstream& myReader, std::vector <ScheduleSlot> &sch
   std::size_t comma{ line.find(',') };//location of break between participant name and times available
 	 line = line.substr(comma + 1, line.size() - comma - 1); //removes participant name from line
 	 char groupLevel {line[0]};
-  Level level {static_cast<Level>(groupLevel)};
-  line = line.substr(2, line.size()-2);
+  Level level {getLevel(groupLevel)}; //converts level char to Level enum type
+  line = line.substr(2, line.size()-2); //removes participant group level from line so it only contains the participant's times available.
   
 
   std::vector < ScheduleSlot* > timesAvailable{};//array storing if participant is available at each time slot
 
   getScheduleSlots(line, timesAvailable, scheduleSlots, Level::level*periodsInDay*daysInCycle); //gets times available from line and adds it to times avaliable vector
 
-  for(ScheduleSlot* scheduleSlot, timesAvailable)
-   scheduleSlot->addParticipant(timesAvailable); //adds participant to schedule slots at the times they are participating in their level
+  for(ScheduleSlot* scheduleSlot: timesAvailable) //adds participant to schedule slots at the times they are participating in their level
+   scheduleSlot->addParticipant(timesAvailable); 
  }
 }
 int main()
