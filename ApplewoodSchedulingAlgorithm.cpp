@@ -802,7 +802,9 @@ public:
 class ParticipantGroup
 {
 	int m_participants{};
-	std::vector <ScheduleSlot*> m_ScheduleSlots{};
+	std::vector <ScheduleSlot> m_ScheduleSlots{};
+ std::vector <Activity> m_activities{};
+ std::vector <Staff> m_staff{};
 	int m_totalTimeSlots{};
 
  //removes all schedule slots not in group from possible activities
@@ -824,10 +826,12 @@ public:
 	ParticipantGroup() = default;
 
  //use given pointers and lists to copy list of Schedule Slots, activities and staff and initialize member variables
- ParticipantGroup(const ScheduleSlot* startOfList, const ScheduleSlot* endOfList, std::vector<Activity> &activities, std::vector<Staff> &staff)
+ ParticipantGroup(const ScheduleSlot* startOfList, const ScheduleSlot* endOfList, const std::vector<Activity> &activities, const std::vector<Staff> &staff)
  :m_scheduleslots {std::copy(startOfList, endOfList)}, //gets copy so that we can fill spots using only slots in this group
   m_participants {m_scheduleSlots[0]->getParticipants()},
-  m_totalTimeSlots {m_scheduleSlots.size()}
+  m_totalTimeSlots {m_scheduleSlots.size()},
+  m_activities {activities},
+  m_staff {staff}
  {}
 
  //gets total time slots
