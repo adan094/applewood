@@ -806,11 +806,32 @@ class ParticipantGroup
  std::vector <Activity> m_activities{};
  std::vector <Staff> m_staff{};
 	int m_totalTimeSlots{};
+ int m_startOfListID {};
+ int m_endOfListID {};
 
  //removes all schedule slots not in group from possible activities
  void pruneActivities()
  {
-  
+  for(Activity &activity: m_activities) //for each activity
+  {
+   std::size_t index{0}; //keeps track of activity's possible slots we are iterating through
+   std::vector <ScheduleSlot*>* possibleSlots{&activity.getTimesAvailable()}; //a modifiable list of this activity's possible slots
+   while(index<possibleSlots->size()) //while there are more spots to check
+   {
+    int indexID {(*possibleSlots)[index]->getID()};
+
+    //if the id of the slot is outside the slots used by this participant group, remove it from the list
+    if(indexID<m_startOfListID||indexID>m_endOfListID)
+     possibleSlot->erase(possibleSlots->begin+index);
+
+    //otherwise replace it with a reference to the copy
+    else
+    {
+     possibleSlots[index]=std::find(m_possibleSlots.begin(),m_possibleSlots.end(),possibleSlots[index]);
+     ++index;
+    }
+   }
+  }
  }
 
  //removes all schedule slots not in group from possible staff
@@ -827,7 +848,9 @@ public:
 
  //use given pointers and lists to copy list of Schedule Slots, activities and staff and initialize member variables
  ParticipantGroup(const ScheduleSlot* startOfList, const ScheduleSlot* endOfList, const std::vector<Activity> &activities, const std::vector<Staff> &staff)
- :m_scheduleslots {std::copy(startOfList, endOfList)}, //gets copy so that we can fill spots using only slots in this group
+ :m_startOfListID {startOfList->getID()},
+  m_endOfListID {endOfList->getID()},
+  m_scheduleslots {std::copy(startOfList, endOfList)}, //gets copy so that we can fill spots using only slots in this group
   m_participants {m_scheduleSlots[0]->getParticipants()},
   m_totalTimeSlots {m_scheduleSlots.size()},
   m_activities {activities},
