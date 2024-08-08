@@ -330,11 +330,24 @@ public:
   ++m_numberOfParticipants;
  }
 
-//gets the number if participants, participating in this schedule slot
+ //gets the number if participants, participating in this schedule slot
  constexpr int getNumberOfParticipants() const
  {
   return m_numberOfParticipants
  }
+
+ //gets possibleActivities array
+	std::vector <Activity*>& getActivitiesAvailable()
+	{
+		return m_possibleActivities;
+	}
+
+ //gets possibleActivities array
+	std::vector <Staff*>& getStaffAvailable()
+	{
+		return m_possibleStaff;
+	}
+
 
 };
 
@@ -825,10 +838,17 @@ class ParticipantGroup
     //otherwise replace it with a reference to the copy
     else
     {
-     possibleSlots[index]=m_possibleSlots[possibleSlots[index]->getID()-m_startOfListID];
+     possibleSlots[index]=&m_possibleSlots[possibleSlots[index]->getID()-m_startOfListID];
      ++index;
     }
    }
+ }
+
+ //reseats all pointers in given list to their local copy
+ void reseatPointers(std::vector<SpotWrapper*> *spots, std::vector<SpotWrapper*> newSpots)
+ {
+  for(SpotWrapper *spot: *spots)
+    spot = &newSpots[spot->getID()-newSpots[0].getID()]
  }
 
  //preforms prune actions on activity's possible pointers
@@ -852,7 +872,17 @@ class ParticipantGroup
  //reseats pointers to copy lists for activity and staff lists in each schedule slot copy
  void pruneScheduleSlot
  {
+  //for each slot
+  for(ScheduleSlot &slot: m_scheduleSlots)
+  {
+   std::vector <Activity*>* possibleActivities{&slot.getActivitiesAvailable()}; //a modifiable list of this slot's possible activities
+   std::vector <Staff*>* possibleStaff{&slot.getStaffAvailable()}; //a modifiable list of this slot's possible staff
 
+   //reassigns all possible activities in this slot and reassigns them to copies in this object
+   reseatPointers(possibleActivities, m_activities)
+   //reassigns all possible staff in this slot and reassigns them to copies in this object
+   reseatPointers(possibleStaff, m_staff)
+  }
  }
 
 public:
