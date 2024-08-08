@@ -447,6 +447,24 @@ public:
 		}
 	}
 
+ //gets m_preferredStaff array
+	std::vector <Staff*>& getPreferredStaff()
+	{
+		return m_preferredStaff;
+	}
+
+ //gets m_neutralStaff array
+	std::vector <Staff*>& getNeutralStaff()
+	{
+		return m_neutralStaff;
+	}
+
+ //gets m_unpreferredStaff array
+	std::vector <Staff*>& getUnpreferredStaff()
+	{
+		return m_unpreferredStaff;
+	}
+
 };
 
 
@@ -617,6 +635,26 @@ public:
 				removeSpot(spot, m_unpreferredActivities);
 		}
 	}
+
+ //gets m_preferredActivities array
+	std::vector <Activity*>& getPreferredActivities()
+	{
+		return m_preferredActivities;
+	}
+
+ //gets m_neutralActivities array
+	std::vector <Activity*>& getNeutralActivities()
+	{
+		return m_neutralActivities;
+	}
+
+ //gets m_unpreferredActivities array
+	std::vector <Activity*>& getUnpreferredActivities()
+	{
+		return m_unpreferredActivities;
+	}
+
+
 };
 
 int SpotWrapper::id{ 0 }; //initiailize the starting id of the SpotWrapper class
@@ -857,6 +895,19 @@ class ParticipantGroup
   for(Activity &activity: m_activities) //for each activity
   {
    prunePossibleSlots(activity);
+   //reseat possible staff vectors
+  
+   std::vector <Staff*>* preferredStaff{&activity.getPreferredStaff()}; //a modifiable list of this activity's preferred staff
+   //reassigns all preferred staff for this activitiy and reassigns them to copies in this object
+   reseatPointers(preferredStaff, m_staff);
+
+   std::vector <Staff*>* neutralStaff{&activity.getNeutralStaff()}; //a modifiable list of this activity's neutral staff
+   //reassigns all neutral staff for this activitiy and reassigns them to copies in this object
+   reseatPointers(neutralStaff, m_staff);
+
+   std::vector <Staff*>* unpreferredStaff{&activity.getUnpreferredStaff()}; //a modifiable list of this activity's unpreferred staff
+   //reassigns all unpreferred staff for this activitiy and reassigns them to copies in this object
+   reseatPointers(unpreferredStaff, m_staff);
   }
  }
 
@@ -866,6 +917,20 @@ class ParticipantGroup
   for(Staff &staff: m_staff) //for each staff
   {
    prunePossibleSlots( staff );
+
+   //reseat possible activity vectors
+  
+   std::vector <Activity*>* preferredActivities{&staff.getPreferredActivities()}; //a modifiable list of this activity's preferred staff
+   //reassigns all preferred activities for this staff member and reassigns them to copies in this object
+   reseatPointers(preferredActivities, m_activities);
+
+   std::vector <Activity*>* neutralActivities{&staff.getNeutralActivities()}; //a modifiable list of this activity's neutral staff
+   //reassigns all neutral activities for this staff member and reassigns them to copies in this object
+   reseatPointers(neutralActivities, m_activities);
+
+   std::vector <Activity*>* unpreferredActivities{&staff.getUnpreferredActivities()}; //a modifiable list of this activity's unpreferred staff
+   //reassigns all unpreferred activities for this staff member and reassigns them to copies in this object
+   reseatPointers(unpreferredActivities, m_activities);
   }
  }
 
@@ -879,9 +944,9 @@ class ParticipantGroup
    std::vector <Staff*>* possibleStaff{&slot.getStaffAvailable()}; //a modifiable list of this slot's possible staff
 
    //reassigns all possible activities in this slot and reassigns them to copies in this object
-   reseatPointers(possibleActivities, m_activities)
+   reseatPointers(possibleActivities, m_activities);
    //reassigns all possible staff in this slot and reassigns them to copies in this object
-   reseatPointers(possibleStaff, m_staff)
+   reseatPointers(possibleStaff, m_staff);
   }
  }
 
