@@ -809,13 +809,11 @@ class ParticipantGroup
  int m_startOfListID {};
  int m_endOfListID {};
 
- //removes all schedule slots not in group from possible activities
- void pruneActivities()
+//Removes all out of scope schedule slots from this spot's possible list and reassigns pointers to this group's copy
+ void prunePossibleSlots(SpotWrapper &spot)
  {
-  for(Activity &activity: m_activities) //for each activity
-  {
-   std::size_t index{0}; //keeps track of activity's possible slots we are iterating through
-   std::vector <ScheduleSlot*>* possibleSlots{&activity.getTimesAvailable()}; //a modifiable list of this activity's possible slots
+   std::size_t index{0}; //keeps track of spot's possible slots we are iterating through
+   std::vector <ScheduleSlot*>* possibleSlots{&spot.getTimesAvailable()}; //a modifiable list of this spot's possible slots
    while(index<possibleSlots->size()) //while there are more spots to check
    {
     int indexID {(*possibleSlots)[index]->getID()};
@@ -827,15 +825,32 @@ class ParticipantGroup
     //otherwise replace it with a reference to the copy
     else
     {
-     possibleSlots[index]=std::find(m_possibleSlots.begin(),m_possibleSlots.end(),possibleSlots[index]);
+     possibleSlots[index]=m_possibleSlots[possibleSlots[index]->getID()-m_startOfListID];
      ++index;
     }
    }
+ }
+
+ //preforms prune actions on activity's possible pointers
+ void pruneActivities()
+ {
+  for(Activity &activity: m_activities) //for each activity
+  {
+   prunePossibleSlots(activity);
   }
  }
 
- //removes all schedule slots not in group from possible staff
+ //preforms prune actions on staff's possible pointers
  void pruneStaff()
+ {
+  for(Staff &staff: m_staff) //for each staff
+  {
+   prunePossibleSlots( staff );
+  }
+ }
+
+ //reseats pointers to copy lists for activity and staff lists in each schedule slot copy
+ void pruneScheduleSlot
  {
 
  }
