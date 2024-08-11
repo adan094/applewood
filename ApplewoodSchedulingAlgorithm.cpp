@@ -890,10 +890,21 @@ class ParticipantGroup
  }
 
  //preforms prune actions on activity's possible pointers
- void pruneActivities()
+ void pruneActivities(const int numberOfFilledSlots)
  {
+  std::vector <int> prevTimesLeftPerCycle{}; //keeps track of total times left for this activity
+  int totalTimesPerCycle {}; //sum of activity's times per cycle
+  std::size_t index{0};
   for(Activity &activity: m_activities) //for each activity
   {
+   //times per cycle is rounded value relating to proportion of slots used
+   int timesPerCycle {round(activity->getTimesLeftPerCycle()*m_scheduleSlots.size()/((periodsInDay*daysInCycle*Level::maxLevel)-numberOfFilledSlots))};
+   totalTimesPerCycle += timesPerCycle;
+   prevTimesLeftPerCycle[index]=activity->getTimesLeftPerCycle()
+   ++index;
+   activity->setTimesPerCycle(timesPerCycle);
+   activity->setTimesLeftPerCycle(timesPerCycle);
+   
    prunePossibleSlots(activity);
    //reseat possible staff vectors
   
@@ -909,13 +920,38 @@ class ParticipantGroup
    //reassigns all unpreferred staff for this activitiy and reassigns them to copies in this object
    reseatPointers(unpreferredStaff, m_staff);
   }
+  //while there are not enough activities to fill the slots
+  while(totalTimesPerCycle<m_scheduleSlots.size()
+  {
+   for(std::size_t index{0}; index<m_activities.size(); ++index)) //for each activity
+   {
+    //if there are more of this activity available to add, add it
+    if(m_activities[index]->getTimesPerCycle()<prevTimesLeftPerCycle[index])
+    {
+     ++totalTimePerCycle;
+     m_activities[index]->setTimesPerCycle(m_activities[index]->getTimesPerCycle()+1);
+    }
+   }
+  }
  }
 
  //preforms prune actions on staff's possible pointers
  void pruneStaff()
  {
+  std::vector <int> prevTimesLeftPerCycle{}; //keeps track of total times left for this activity
+  int totalTimesPerCycle {}; //sum of staff's times per cycle
+  std::size_t index{0};
   for(Staff &staff: m_staff) //for each staff
   {
+   //times per cycle is rounded value relating to proportion of slots used
+   int timesPerCycle {round(staff->getTimesLeftPerCycle()*m_scheduleSlots.size()/((periodsInDay*daysInCycle*Level::maxLevel)-numberOfFilledSlots))};
+   totalTimesPerCycle += timesPerCycle;
+   prevTimesLeftPerCycle[index]=activity->getTimesLeftPerCycle()
+   ++index;
+   staff->setTimesPerCycle(timesPerCycle);
+   staff->setTimesLeftPerCycle(timesPerCycle);
+   
+
    prunePossibleSlots( staff );
 
    //reseat possible activity vectors
@@ -931,6 +967,19 @@ class ParticipantGroup
    std::vector <Activity*>* unpreferredActivities{&staff.getUnpreferredActivities()}; //a modifiable list of this activity's unpreferred staff
    //reassigns all unpreferred activities for this staff member and reassigns them to copies in this object
    reseatPointers(unpreferredActivities, m_activities);
+  }
+  //while there are not enough staff to fill the slots
+  while(totalTimesPerCycle<m_scheduleSlots.size()
+  {
+   for(std::size_t index{0}; index<m_staff.size(); ++index)) //for each staff
+   {
+    //if there are more of this staff available to add, add it
+    if(m_staff[index]->getTimesPerCycle()<prevTimesLeftPerCycle[index])
+    {
+     ++totalTimePerCycle;
+     m_staff[index]->setTimesPerCycle(m_staff[index]->getTimesPerCycle()+1);
+    }
+   }
   }
  }
 
@@ -950,6 +999,8 @@ class ParticipantGroup
   }
  }
 
+
+
 public:
 
 	static std::array<ScheduleSlot, daysInCycle* periodsInDay> scheduleSlots;
@@ -957,7 +1008,7 @@ public:
 	ParticipantGroup() = default;
 
  //use given pointers and lists to copy list of Schedule Slots, activities and staff and initialize member variables
- ParticipantGroup(const ScheduleSlot* startOfList, const ScheduleSlot* endOfList, const std::vector<Activity> &activities, const std::vector<Staff> &staff)
+ ParticipantGroup(const ScheduleSlot* startOfList, const ScheduleSlot* endOfList, const std::vector<Activity> &activities, const std::vector<Staff> &staff, const int numberOfFilledSlots)
  :m_startOfListID {startOfList->getID()},
   m_endOfListID {endOfList->getID()},
   m_scheduleslots {std::copy(startOfList, endOfList)}, //gets copy so that we can fill spots using only slots in this group
