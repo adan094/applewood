@@ -200,6 +200,30 @@ public:
 		return m_timesPerCycle;
 	}
 
+ //sets number of times this spot will occur
+ void setTimesPerCycle (const int timesPerCycle)
+ {
+  m_timesPerCycle=timesPerCycle;
+ }
+
+ //sets how many more times this spot will occur
+ void setTimesLeftPerCycle (const int timesLeftPerCycle)
+ {
+  m_timesLeftPerCycle=timesLeftPerCycle;
+ }
+
+ //increases the number of times this spot will occur by 1
+ void incrementTimesPerCycle ()
+ {
+  ++m_timesPerCycle;
+ }
+
+ //increases how many more times this spot will occur by 1
+ void incrementTimesLeftPerCycle ()
+ {
+  ++m_timesLeftPerCycle;
+ }
+
 	void remove(SpotWrapper* spot);
 	void add(SpotWrapper* spot);
 
@@ -886,25 +910,18 @@ class ParticipantGroup
  void reseatPointers(std::vector<SpotWrapper*> *spots, std::vector<SpotWrapper*> newSpots)
  {
   for(SpotWrapper *spot: *spots)
-    spot = &newSpots[spot->getID()-newSpots[0].getID()]
+    spot = &newSpots[spot->getID()-newSpots[0].getID()];
  }
 
  //preforms prune actions on activity's possible pointers
- void pruneActivities(const int numberOfFilledSlots)
+ void pruneActivities(std::vector <Activity*> &activitiesToFill)
  {
-  std::vector <int> prevTimesLeftPerCycle{}; //keeps track of total times left for this activity
-  int totalTimesPerCycle {}; //sum of activity's times per cycle
-  std::size_t index{0};
   for(Activity &activity: m_activities) //for each activity
   {
-   //times per cycle is rounded value relating to proportion of slots used
-   int timesPerCycle {round(activity->getTimesLeftPerCycle()*m_scheduleSlots.size()/((periodsInDay*daysInCycle*Level::maxLevel)-numberOfFilledSlots))};
-   totalTimesPerCycle += timesPerCycle;
-   prevTimesLeftPerCycle[index]=activity->getTimesLeftPerCycle()
-   ++index;
-   activity->setTimesPerCycle(timesPerCycle);
-   activity->setTimesLeftPerCycle(timesPerCycle);
-   
+   //resets times per cycle and times left per cycle
+   activity->setTimesPerCycle{0};
+   activity->setTimesLeftPerCycle{0};
+
    prunePossibleSlots(activity);
    //reseat possible staff vectors
   
@@ -920,37 +937,23 @@ class ParticipantGroup
    //reassigns all unpreferred staff for this activitiy and reassigns them to copies in this object
    reseatPointers(unpreferredStaff, m_staff);
   }
-  //while there are not enough activities to fill the slots
-  while(totalTimesPerCycle<m_scheduleSlots.size()
+
+  //increment each copy of activity corresponding with list to fill to get proper spots to fill for each activity
+  for(std::size_t index{0}; index<activitiesToFill.size(); ++index)
   {
-   for(std::size_t index{0}; index<m_activities.size(); ++index)) //for each activity
-   {
-    //if there are more of this activity available to add, add it
-    if(m_activities[index]->getTimesPerCycle()<prevTimesLeftPerCycle[index])
-    {
-     ++totalTimePerCycle;
-     m_activities[index]->setTimesPerCycle(m_activities[index]->getTimesPerCycle()+1);
-    }
-   }
+   m_activities[activitiesToFill[index].getID()-m_activities[0].getID()].incrementTimesPerCycle();
+   m_activities[activitiesToFill[index].getID()-m_activities[0].getID()].incrementTimesLeftPerCycle();
   }
  }
 
  //preforms prune actions on staff's possible pointers
- void pruneStaff()
+ void pruneStaff(std::vector <Staff*> &staffToFill)
  {
-  std::vector <int> prevTimesLeftPerCycle{}; //keeps track of total times left for this activity
-  int totalTimesPerCycle {}; //sum of staff's times per cycle
-  std::size_t index{0};
   for(Staff &staff: m_staff) //for each staff
   {
-   //times per cycle is rounded value relating to proportion of slots used
-   int timesPerCycle {round(staff->getTimesLeftPerCycle()*m_scheduleSlots.size()/((periodsInDay*daysInCycle*Level::maxLevel)-numberOfFilledSlots))};
-   totalTimesPerCycle += timesPerCycle;
-   prevTimesLeftPerCycle[index]=activity->getTimesLeftPerCycle()
-   ++index;
-   staff->setTimesPerCycle(timesPerCycle);
-   staff->setTimesLeftPerCycle(timesPerCycle);
-   
+  //resets times per cycle and times left per cycle
+   staff->setTimesPerCycle{0};
+   staff->setTimesLeftPerCycle{0};
 
    prunePossibleSlots( staff );
 
@@ -968,18 +971,11 @@ class ParticipantGroup
    //reassigns all unpreferred activities for this staff member and reassigns them to copies in this object
    reseatPointers(unpreferredActivities, m_activities);
   }
-  //while there are not enough staff to fill the slots
-  while(totalTimesPerCycle<m_scheduleSlots.size()
+  //increment each copy of staff corresponding with list to fill to get proper spots to fill for each activity
+  for(std::size_t index{0}; index<staffToFill.size(); ++index)
   {
-   for(std::size_t index{0}; index<m_staff.size(); ++index)) //for each staff
-   {
-    //if there are more of this staff available to add, add it
-    if(m_staff[index]->getTimesPerCycle()<prevTimesLeftPerCycle[index])
-    {
-     ++totalTimePerCycle;
-     m_staff[index]->setTimesPerCycle(m_staff[index]->getTimesPerCycle()+1);
-    }
-   }
+   m_staff[staffToFill[index].getID()-m_staff[0].getID()].incrementTimesPerCycle();
+   m_staff[staffToFill[index].getID()-m_staff[0].getID()].incrementTimesLeftPerCycle();
   }
  }
 
