@@ -980,7 +980,7 @@ class ParticipantGroup
  }
 
  //reseats pointers to copy lists for activity and staff lists in each schedule slot copy
- void pruneScheduleSlot
+ void pruneScheduleSlots
  {
   //for each slot
   for(ScheduleSlot &slot: m_scheduleSlots)
@@ -1004,7 +1004,7 @@ public:
 	ParticipantGroup() = default;
 
  //use given pointers and lists to copy list of Schedule Slots, activities and staff and initialize member variables
- ParticipantGroup(const ScheduleSlot* startOfList, const ScheduleSlot* endOfList, const std::vector<Activity> &activities, const std::vector<Staff> &staff, const int numberOfFilledSlots)
+ ParticipantGroup(const ScheduleSlot* startOfList, const ScheduleSlot* endOfList, const std::vector<Activity> &activities, const std::vector<Staff> &staff, const int numberOfFilledSlots, std::vector<Activity> &activitiesToFill, std::vector<Staff> &staffToFill)
  :m_startOfListID {startOfList->getID()},
   m_endOfListID {endOfList->getID()},
   m_scheduleslots {std::copy(startOfList, endOfList)}, //gets copy so that we can fill spots using only slots in this group
@@ -1012,7 +1012,11 @@ public:
   m_totalTimeSlots {m_scheduleSlots.size()},
   m_activities {activities},
   m_staff {staff}
- {}
+ {
+  pruneActivities(activitiesToFill);
+  pruneStaff(staffToFill);
+  pruneScheduleSlots();
+ }
 
  //gets total time slots
 	constexpr int getTotalTimeSlots() const
