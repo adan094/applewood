@@ -1429,7 +1429,7 @@ int main()
  //creates participant group blocks and adds them to list
  for(std::size_t index{1}; index<startOfBlocks.size(); ++index)
  {
-  participantGroups.emplace_back{ParticipantGroup(startOfBlocks[index-1-unfilledSlots],startOfBlocks[index]-1, activities, staff)};
+  participantGroups.emplace_back{ParticipantGroup(startOfBlocks[index-1]-unfilledSlots, startOfBlocks[index]-1, activities, staff,startOfBlocks[index-1]-unfilledSlots-startOfBlocks[0])};
   unfilledSlots=participantGroups[participantGroups.size()-1].getUnfilledSlots();
  }
 
