@@ -760,14 +760,17 @@ class FillSpot
 		return true;
 	}
 
+std::size_t m_nextIndex{ 0 };
+
 	//gets the spot with the lowest index belonging to a given spot
-	SpotWrapper* getFirst(SpotWrapper* spot)
+	SpotWrapper* getNext(SpotWrapper* spot)
 	{
-		std::size_t index{ 0 };
+		if(m_nextIndex!=0)
+   ++m_nextIndex;
 		try
 		{
 			while (foundIndex(spot, index))
-				++index;
+				++m_nextIndex;
 		}
 		catch (...)
 		{
@@ -787,7 +790,7 @@ class FillSpot
 		}
 		catch (...)
 		{
-			throw "Nothing can fill these spots";
+			return null;
 		}
 		return m_spotsToBeFilled[index];
 	}
@@ -839,14 +842,33 @@ public:
 	}
 
 	//fills the next spot in the lsit and updates all spots as needed
-	bool fillNextSpot()
+	SpotWrapper* fillNextSpot()
 	{
-		if (m_spotsToBeFilled.size() == 0) //if there are no more spots to fill return false
-			return false;
 
 		SpotWrapper* item1{ m_spotsToBeFilled[0] }; //gets the first spot as the first spot in the spots to be filled list
-		SpotWrapper* item2{ getFirst(item1) }; //gets the second spot as the first spot's first spot
-		SpotWrapper* item3{ getFirst(item1,item2) }; //gets the thirdd spot as the first spot from the union of the first and second spot
+  
+  SpotWrapper* item2{null};
+
+  
+  
+  
+  SpotWrapper* item3{null}; 
+
+ //gets the third spot as the first spot from the union of the first and second spot
+  while(item3 == null) //while there is no common item bwtween item 1 and 2
+  {
+   
+   try
+   {
+		  item2 = getFirst(item1) ; //gets the second spot as the first spot's next spot
+		 }
+   catch("Nothing can fill this spot")
+   {
+    return item1; //if nothing can fill the spots return the first spot
+   }
+   //gets the third spot as the first spot from the union of the first and second spot
+   item3 = getFirst(item1,item2);
+  }
 
 		item1->add(item2, item3); //adds the second and third spot to the first one and removes the first spot from the possible lists of the second and third spots if necessary
 		item2->add(item1, item3); //adds the first and third spot to the second one and removes the second spot from the possible lists of the first and third spots if necessary
@@ -854,8 +876,8 @@ public:
 
 		updateSpotsToBeFilled(); //updates the spots to be filled list and its members indices
 
-		return true; //return true if there are still spots to be filled (including the one just filled)
-	}
+	 return null;
+ }
 };
 
 
@@ -939,7 +961,7 @@ class ParticipantGroup
   }
 
   //increment each copy of activity corresponding with list to fill to get proper spots to fill for each activity
-  for(std::size_t index{0}; index<activitiesToFill.size(); ++index)
+  for(std::size_t index{0}; index<m_scheduleSlots.size(); ++index)
   {
    m_activities[activitiesToFill[index].getID()-m_activities[0].getID()].incrementTimesPerCycle();
    m_activities[activitiesToFill[index].getID()-m_activities[0].getID()].incrementTimesLeftPerCycle();
@@ -972,7 +994,7 @@ class ParticipantGroup
    reseatPointers(unpreferredActivities, m_activities);
   }
   //increment each copy of staff corresponding with list to fill to get proper spots to fill for each activity
-  for(std::size_t index{0}; index<staffToFill.size(); ++index)
+  for(std::size_t index{0}; index<m_scheduleSlots.size(); ++index)
   {
    m_staff[staffToFill[index].getID()-m_staff[0].getID()].incrementTimesPerCycle();
    m_staff[staffToFill[index].getID()-m_staff[0].getID()].incrementTimesLeftPerCycle();
@@ -992,6 +1014,29 @@ class ParticipantGroup
    reseatPointers(possibleActivities, m_activities);
    //reassigns all possible staff in this slot and reassigns them to copies in this object
    reseatPointers(possibleStaff, m_staff);
+  }
+ }
+
+//fills participant group
+ void fill(std::vector <Activity*> &activitiesToFill, std::vector <Staff*> &staffToFill)
+ {
+  int numberOfScheduleSlots {m_scheduleSlots.size()};
+  FillSpot filler(m_activities, m_scheduleSlots, m_staff);
+  //fill each slot in list
+
+  SpotWrapper* unfillable {null};
+  int swapIndex {0};
+  for(std::size_t index{0}; index<numberOfScheduleSlots; ++index))
+  {
+   unfillable={filler.fillNextSpot()};
+   //if the spot to be added cannot be added
+   if(unfillable!=null)
+   {
+    //swap it out and try again
+    
+    --index;
+    ++swapIndex;
+   }
   }
  }
 
@@ -1016,6 +1061,7 @@ public:
   pruneActivities(activitiesToFill);
   pruneStaff(staffToFill);
   pruneScheduleSlots();
+  fill(activitiesToFill, staffToFill);
  }
 
  //gets total time slots
