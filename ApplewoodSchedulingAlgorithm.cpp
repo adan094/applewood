@@ -920,6 +920,8 @@ class ParticipantGroup
 	int m_totalTimeSlots{};
  int m_startOfListID {};
  int m_endOfListID {};
+ int m_unfilledSlots {};
+ Spotwrapper* startOfListPointer{};
 
 //Removes all out of scope schedule slots from this spot's possible list and reassigns pointers to this group's copy
  void prunePossibleSlots(SpotWrapper &spot)
@@ -1063,7 +1065,14 @@ class ParticipantGroup
     }
     else
     {
-
+     Spotwrapper * found {std::find(startOfListPointer, startOfListPointer+endOfListID-startOfListID, [unfillable] (Spotwrapper* spot)
+     {
+      if(spot->getID()==unfillable->getID())
+       return true;
+      return false;
+     })};
+     std::swap(startOfListPointer+endOfListID-startOfListID-m_unfilledSlots,found);
+     ++m_unfilledSlots;
     }
 
     --index;
@@ -1082,7 +1091,8 @@ public:
 
  //use given pointers and lists to copy list of Schedule Slots, activities and staff and initialize member variables
  ParticipantGroup(const ScheduleSlot* startOfList, const ScheduleSlot* endOfList, const std::vector<Activity> &activities, const std::vector<Staff> &staff, const int numberOfFilledSlots, std::vector<Activity> &activitiesToFill, std::vector<Staff> &staffToFill)
- :m_startOfListID {startOfList->getID()},
+ :m_startOfListPointer {startOfList},
+  m_startOfListID {startOfList->getID()},
   m_endOfListID {endOfList->getID()},
   m_scheduleslots {std::copy(startOfList, endOfList)}, //gets copy so that we can fill spots using only slots in this group
   m_participants {m_scheduleSlots[0]->getParticipants()},
@@ -1114,6 +1124,11 @@ public:
 			std::cout << "---------------------------\n"; //divider between days
 		}
 	}
+
+ constexpr int getUnfilledSlots() const
+ {
+  return m_unfilledSlots;
+ }
 
 
 };
@@ -1409,9 +1424,14 @@ int main()
    startOfBlocks.push_back[&endOfBlock];
  }
 
+ int unfilledSlots{0};
+
  //creates participant group blocks and adds them to list
  for(std::size_t index{1}; index<startOfBlocks.size(); ++index)
-  participantGroups.emplace_back{ParticipantGroup(startOfBlocks[index-1],startOfBlocks[index]-1, activities, staff)};
+ {
+  participantGroups.emplace_back{ParticipantGroup(startOfBlocks[index-1-unfilledSlots],startOfBlocks[index]-1, activities, staff)};
+  unfilledSlots=participantGroups[participantGroups.size()-1].getUnfilledSlots();
+ }
 
 	//testGroup.addActivities(categories, maxID);
 
