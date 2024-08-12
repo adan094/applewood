@@ -878,6 +878,21 @@ public:
 
 	 return null;
  }
+
+//adds 1 times to fill and times left to fill to slot with given id
+ void addToSlot(const int id)
+ {
+  //finds spot with given id
+  SpotWrapper *found {std::find(m_spotsToBeFilled.begin(), m_spotsToBeFilled.end(), [&id](SpotWrapper *spot)
+  {
+   if(spot->getID()==id)
+    return true;
+   return false;
+  })};
+  //increments times to fill and times left to fill
+  found->incrementTimesToFill();
+  found->incrementTimesLeftToFill();
+ }
 };
 
 
@@ -1033,7 +1048,24 @@ class ParticipantGroup
    if(unfillable!=null)
    {
     //swap it out and try again
-    
+    unfillable->setTimesPerCycle(unfillable->getTimesPerCycle()-1);
+    unfillable->setTimesLeftPerCycle(unfillable->getTimesPerCycle()-1);
+
+    if(unfillable->getType()==Type::Activity)
+    {
+     filler.addToTime(activitiesToFill[m_scheduleSlots.size()+index]->getID());
+     std::swap(activitiesToFill[m_scheduleSlots.size()+index], activitiesToFill[unfillable->getID()-m_activities[0].getID()]);
+    }
+    else if(unfillable->getType()==Type::Staff)
+    {
+     filler.addToTime(staffToFill[m_scheduleSlots.size()+index]->getID());
+     std::swap(staffToFill[m_scheduleSlots.size()+index], staffToFill[unfillable->getID()-m_staff[0].getID()]);
+    }
+    else
+    {
+
+    }
+
     --index;
     ++swapIndex;
    }
