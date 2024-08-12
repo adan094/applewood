@@ -1372,7 +1372,7 @@ void readInParticipants(std::ifstream& myReader, std::vector <ScheduleSlot> &sch
  }
 }
 
-template <typename t>
+template <typename T>
 void fillFillList(std::vector <T*> spotsToFill, std::vector <T> &spots)
 {
  for(std::size_t index{0}; index<scheduleSlots.size(); ++index)
