@@ -1371,6 +1371,26 @@ void readInParticipants(std::ifstream& myReader, std::vector <ScheduleSlot> &sch
    scheduleSlot->addParticipant(timesAvailable); 
  }
 }
+
+template <typename t>
+void fillFillList(std::vector <T*> spotsToFill, std::vector <T> &spots)
+{
+ for(std::size_t index{0}; index<scheduleSlots.size(); ++index)
+ {
+  T* nextSpot {&spots[0]};
+  for(std::size_t spotIndex{1}; spotIndex<spots.size(); ++spotIndex)
+  {
+   if(nextSpot->getTimesLeftToFill()/nextSpot->getTimesToFill()<spots[spotIndex]->getTimesLeftToFill()/spots[spotIndex]->getTimesToFill())
+    nextSpot=&spots[spotIndex];
+   if(nextSpot->getTimesLeftToFill()==nextSpot->getTimesToFill())
+    break;
+  }
+  spotsToFill.push_back(nextSpot);
+  nextActivity.setTimesLeftToFill(nextSpot.getTimesLeftToFill()-1);
+ }
+}
+
+
 int main()
 {
 
@@ -1426,10 +1446,16 @@ int main()
 
  int unfilledSlots{0};
 
+ std::vector <Activity*> activitiesToFill{};
+ std::vector <Staff*> staffToFill{};
+
+ fillFillList(activitiesToFill,activities);
+ fillFillList(staffToFill,staff);
+
  //creates participant group blocks and adds them to list
  for(std::size_t index{1}; index<startOfBlocks.size(); ++index)
  {
-  participantGroups.emplace_back{ParticipantGroup(startOfBlocks[index-1]-unfilledSlots, startOfBlocks[index]-1, activities, staff,startOfBlocks[index-1]-unfilledSlots-startOfBlocks[0])};
+  participantGroups.emplace_back{ParticipantGroup(startOfBlocks[index-1]-unfilledSlots, startOfBlocks[index]-1, activities, staff,startOfBlocks[index-1]-unfilledSlots-startOfBlocks[0], activitiesToFill, staffToFill)};
   unfilledSlots=participantGroups[participantGroups.size()-1].getUnfilledSlots();
  }
 
