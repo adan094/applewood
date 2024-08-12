@@ -913,12 +913,12 @@ public:
 
 class ParticipantGroup
 {
-	int m_participants{};
-	std::vector <ScheduleSlot> m_ScheduleSlots{};
- std::vector <Activity> m_activities{};
- std::vector <Staff> m_staff{};
+	int m_participants{}; //holds number of participants in group
+	std::vector <ScheduleSlot> m_ScheduleSlots{}; //holds scheduleSlots in group
+ std::vector <Activity> m_activities{}; //holds activities in group
+ std::vector <Staff> m_staff{}; //holds staff in group
 	int m_totalTimeSlots{};
- int m_startOfListID {};
+ int m_startOfListID {}; //holds ID of first slot read in
  int m_endOfListID {};
  int m_unfilledSlots {};
  Spotwrapper* startOfListPointer{};
@@ -1037,8 +1037,8 @@ class ParticipantGroup
 //fills participant group
  void fill(std::vector <Activity*> &activitiesToFill, std::vector <Staff*> &staffToFill)
  {
-  int numberOfScheduleSlots {m_scheduleSlots.size()};
-  FillSpot filler(m_activities, m_scheduleSlots, m_staff);
+  int numberOfScheduleSlots {m_scheduleSlots.size()}; //holds number if schedule slots
+  FillSpot filler(m_activities, m_scheduleSlots, m_staff); //initialize fillspot
   //fill each slot in list
 
   SpotWrapper* unfillable {null};
@@ -1049,20 +1049,25 @@ class ParticipantGroup
    //if the spot to be added cannot be added
    if(unfillable!=null)
    {
-    //swap it out and try again
+    //remove 1 from times per cycle of unfillable index
     unfillable->setTimesPerCycle(unfillable->getTimesPerCycle()-1);
     unfillable->setTimesLeftPerCycle(unfillable->getTimesPerCycle()-1);
 
+    //if spot is activity
     if(unfillable->getType()==Type::Activity)
     {
-     filler.addToTime(activitiesToFill[m_scheduleSlots.size()+index]->getID());
-     std::swap(activitiesToFill[m_scheduleSlots.size()+index], activitiesToFill[unfillable->getID()-m_activities[0].getID()]);
+     //swap an instance of the spot that is unfillable with the next activity in the list that has not been tried and add one to its quantities
+     filler.addToTime(activitiesToFill[numberOfScheduleSlots+index]->getID());
+     std::swap(activitiesToFill[numberOfScheduleSlots+index], activitiesToFill[unfillable->getID()-m_activities[0].getID()]);
     }
+    //if spot is staff
     else if(unfillable->getType()==Type::Staff)
     {
-     filler.addToTime(staffToFill[m_scheduleSlots.size()+index]->getID());
-     std::swap(staffToFill[m_scheduleSlots.size()+index], staffToFill[unfillable->getID()-m_staff[0].getID()]);
+     //swap an instance of the spot that is unfillable with the next activity in the list that has not been tried and add one to its quantities
+     filler.addToTime(staffToFill[numberOfScheduleSlots+index]->getID());
+     std::swap(staffToFill[numberOfScheduleSlots+index], staffToFill[unfillable->getID()-m_staff[0].getID()]);
     }
+    //if spot is schedule slot
     else
     {
      Spotwrapper * found {std::find(startOfListPointer, startOfListPointer+endOfListID-startOfListID, [unfillable] (Spotwrapper* spot)
@@ -1372,19 +1377,23 @@ void readInParticipants(std::ifstream& myReader, std::vector <ScheduleSlot> &sch
  }
 }
 
+//fills given fill list with spots to be filled
 template <typename T>
-void fillFillList(std::vector <T*> spotsToFill, std::vector <T> &spots)
+void fillFillList(std::vector <T*> spotsToFill, std::vector <T> &spots, const int length)
 {
- for(std::size_t index{0}; index<scheduleSlots.size(); ++index)
+ for(std::size_t index{0}; index<length; ++index)
  {
+  //finds the activity with the highest ratio of remaining spots to total spots
   T* nextSpot {&spots[0]};
   for(std::size_t spotIndex{1}; spotIndex<spots.size(); ++spotIndex)
   {
    if(nextSpot->getTimesLeftToFill()/nextSpot->getTimesToFill()<spots[spotIndex]->getTimesLeftToFill()/spots[spotIndex]->getTimesToFill())
     nextSpot=&spots[spotIndex];
+   //locks in slot to be added in its ratio is max possible (1)
    if(nextSpot->getTimesLeftToFill()==nextSpot->getTimesToFill())
     break;
   }
+  //adds found spot as next in list and updates accordingly
   spotsToFill.push_back(nextSpot);
   nextActivity.setTimesLeftToFill(nextSpot.getTimesLeftToFill()-1);
  }
@@ -1446,16 +1455,19 @@ int main()
 
  int unfilledSlots{0};
 
+ //holds order of activities and staff to be filled
  std::vector <Activity*> activitiesToFill{};
  std::vector <Staff*> staffToFill{};
 
- fillFillList(activitiesToFill,activities);
- fillFillList(staffToFill,staff);
+ //fills activity as staff fill lists
+ fillFillList(activitiesToFill,activities,scheduleSlots.size());
+ fillFillList(staffToFill,staff,scheduleSlots.size());
 
  //creates participant group blocks and adds them to list
  for(std::size_t index{1}; index<startOfBlocks.size(); ++index)
  {
   participantGroups.emplace_back{ParticipantGroup(startOfBlocks[index-1]-unfilledSlots, startOfBlocks[index]-1, activities, staff,startOfBlocks[index-1]-unfilledSlots-startOfBlocks[0], activitiesToFill, staffToFill)};
+  //updates number of unfilled spots
   unfilledSlots=participantGroups[participantGroups.size()-1].getUnfilledSlots();
  }
 
